@@ -22,7 +22,7 @@ function MyOrders() {
   };
 
   if (loading) {
-    return <div className="loading">Loading orders...</div>;
+    return <div className="loading">Loading your orders ..</div>;
   }
 
   if (error) {
