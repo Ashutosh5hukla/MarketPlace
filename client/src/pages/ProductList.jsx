@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getProducts } from '../api';
+import { getProducts, getCurrentUser } from '../api';
+import ProductDetailsModal from '../components/ProductDetailsModal';
 
 function ProductList() {
   const [products, setProducts] = useState([]);
@@ -8,6 +9,12 @@ function ProductList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    setCurrentUser(getCurrentUser());
+  }, []);
 
   useEffect(() => {
     fetchProducts();
@@ -73,6 +80,15 @@ function ProductList() {
                 {product.seller && (
                   <p className="seller">👤 Seller: {product.seller.name}</p>
                 )}
+                
+                {/* Info Button */}
+                <button 
+                  className="btn-info"
+                  onClick={() => setSelectedProduct(product)}
+                  title="View product details"
+                >
+                  ℹ️ View Details
+                </button>
               </div>
             ))}
           </div>
@@ -102,6 +118,15 @@ function ProductList() {
             </div>
           )}
         </>
+      )}
+
+      {/* Product Details Modal */}
+      {selectedProduct && (
+        <ProductDetailsModal 
+          product={selectedProduct}
+          currentUser={currentUser}
+          onClose={() => setSelectedProduct(null)}
+        />
       )}
     </div>
   );
