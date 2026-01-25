@@ -12,6 +12,11 @@ export const getProducts = async (req, res) => {
     // Build query
     let query = {};
     
+    // Seller filtering - if sellerId is provided, filter by that seller
+    if (req.query.sellerId) {
+      query.seller = req.query.sellerId;
+    }
+    
     if (req.query.category) {
       query.category = req.query.category;
     }
@@ -69,18 +74,32 @@ export const getProductById = async (req, res) => {
 // @access  Private (Seller/Admin only)
 export const createProduct = async (req, res) => {
   try {
-    const { title, description, price, category, images } = req.body;
+    const { title, description, price, category, condition, damageCondition, images, videoUrl } = req.body;
+
+    // Ensure at least one image is marked as main, if images provided
+    let processedImages = [];
+    if (images && images.length > 0) {
+      const hasMain = images.some(img => img.isMain);
+      processedImages = images.map((img, index) => ({
+        url: img.url || img,
+        isMain: hasMain ? (img.isMain || false) : (index === 0)
+      }));
+    }
 
     const product = await Product.create({
       title,
       description,
       price,
       category,
-      images,
+      condition: condition || 'New',
+      damageCondition: damageCondition || { level: 'None', description: '' },
+      images: processedImages,
+      videoUrl,
       seller: req.user._id
     });
 
-    res.status(201).json(product);
+    const populatedProduct = await Product.findById(product._id).populate("seller", "name email");
+    res.status(201).json(populatedProduct);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -102,16 +121,23 @@ export const updateProduct = async (req, res) => {
       return res.status(403).json({ message: "Not authorized to update this product" });
     }
 
-    const { title, description, price, category, images } = req.body;
+    const { title, description, price, category, condition, damageCondition, images, videoUrl } = req.body;
 
     product.title = title || product.title;
     product.description = description || product.description;
     product.price = price || product.price;
     product.category = category || product.category;
-    product.images = images || product.images;
+    product.condition = condition || product.condition;
+    product.damageCondition = damageCondition || product.damageCondition;
+    product.videoUrl = videoUrl !== undefined ? videoUrl : product.videoUrl;
+    
+    if (images) {
+      product.images = images;
+    }
 
     const updatedProduct = await product.save();
-    res.json(updatedProduct);
+    const populatedProduct = await Product.findById(updatedProduct._id).populate("seller", "name email");
+    res.json(populatedProduct);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

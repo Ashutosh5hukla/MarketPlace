@@ -23,6 +23,7 @@ export const createOrder = async (req, res) => {
     }
 
     const order = await Order.create({
+      user: req.user._id,
       buyer: req.user._id,
       items,
       totalAmount,
