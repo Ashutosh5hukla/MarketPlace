@@ -8,7 +8,25 @@ import { errorHandler, notFound } from "./middleware/errorMiddleware.js";
 const app = express();
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://market-place-ten-rho.vercel.app'
+    ];
+    
+    // Allow Vercel preview deployments (*.vercel.app)
+    if (!origin || allowedOrigins.includes(origin) || origin.includes('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
