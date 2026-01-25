@@ -9,6 +9,10 @@ import Register from './pages/Register';
 import ProductList from './pages/ProductList';
 import CreateProduct from './pages/CreateProduct';
 import MyOrders from './pages/MyOrders';
+import Rent from './pages/Rent';
+import Cart from './pages/Cart';
+import Profile from './pages/Profile';
+import ProductDetails from './pages/ProductDetails';
 import { getCurrentUser } from './api';
 
 function App() {
@@ -56,6 +60,14 @@ function App() {
                 } 
               />
               <Route 
+                path="/product/:id" 
+                element={
+                  <ProtectedRoute>
+                    <ProductDetails />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/products/create" 
                 element={
                   <SellerRoute>
@@ -68,6 +80,41 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <MyOrders />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/rent" 
+                element={
+                  <ProtectedRoute>
+                    <Rent />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/cart" 
+                element={
+                  <ProtectedRoute>
+                    <Cart />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/settings" 
+                element={
+                  <ProtectedRoute>
+                    <div style={{ padding: '2rem', textAlign: 'center' }}>
+                      <h2>Settings Page</h2>
+                      <p>Settings page coming soon...</p>
+                    </div>
                   </ProtectedRoute>
                 } 
               />

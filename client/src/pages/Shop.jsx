@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getProducts, getCurrentUser } from '../api';
-import ProductDetailsModal from '../components/ProductDetailsModal';
+import { formatINR } from '../utils/currency';
+import { Search, ShoppingBag, Book, Laptop, Sofa, Shirt, Package, ChevronLeft, ChevronRight, Info, User, Loader2 } from 'lucide-react';
 
 function Shop() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
 
@@ -49,137 +51,188 @@ function Shop() {
   };
 
   const categories = [
-    { value: 'all', label: 'All Products', icon: '🛍️' },
-    { value: 'Books', label: 'Books', icon: '📚' },
-    { value: 'Electronics', label: 'Electronics', icon: '💻' },
-    { value: 'Furniture', label: 'Furniture', icon: '🛋️' },
-    { value: 'Clothing', label: 'Clothing', icon: '👕' },
-    { value: 'Other', label: 'Other', icon: '📦' }
+    { value: 'all', label: 'All Products', icon: ShoppingBag },
+    { value: 'Books', label: 'Books', icon: Book },
+    { value: 'Electronics', label: 'Electronics', icon: Laptop },
+    { value: 'Furniture', label: 'Furniture', icon: Sofa },
+    { value: 'Clothing', label: 'Clothing', icon: Shirt },
+    { value: 'Other', label: 'Other', icon: Package }
   ];
 
+  const getCategoryIcon = (category) => {
+    const cat = categories.find(c => c.value === category);
+    return cat ? cat.icon : Package;
+  };
+
   if (loading) {
-    return <div className="loading">✨ Loading amazing products...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 text-primary-500 animate-spin mx-auto mb-4" />
+          <p className="text-xl font-semibold text-gray-700">Loading amazing products...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="error-message">{error}</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-8 text-center max-w-md">
+          <p className="text-red-600 font-semibold text-lg">{error}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="shop-page">
-      {/* Shop Header */}
-      <div className="shop-header">
-        <div className="shop-welcome">
-          <h1>Welcome back, {currentUser?.name || 'Shopper'}! 👋</h1>
-          <p>Discover amazing products tailored just for you</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+      <div className="container mx-auto max-w-7xl">
+        {/* Shop Header */}
+        <div className="text-center mb-10 animate-fade-in-down">
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">
+            Welcome back, {currentUser?.name || 'Shopper'}! 👋
+          </h1>
+          <p className="text-gray-600 text-lg">Discover amazing products tailored just for you</p>
         </div>
-      </div>
 
-      {/* Search and Filter Bar */}
-      <div className="shop-controls">
-        <input
-          type="text"
-          placeholder="🔍 Search for products..."
-          className="search-bar-large"
-          value={search}
-          onChange={handleSearch}
-        />
+        {/* Search Bar */}
+        <div className="max-w-2xl mx-auto mb-8 animate-fade-in">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search for products..."
+              className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-200 rounded-xl text-gray-800 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all shadow-sm hover:shadow-md"
+              value={search}
+              onChange={handleSearch}
+            />
+          </div>
+        </div>
         
-        <div className="category-filters">
-          {categories.map((cat) => (
-            <button
-              key={cat.value}
-              className={`filter-btn ${selectedCategory === cat.value ? 'active' : ''}`}
-              onClick={() => handleCategoryChange(cat.value)}
-            >
-              <span className="filter-icon">{cat.icon}</span>
-              <span>{cat.label}</span>
-            </button>
-          ))}
+        {/* Category Filters */}
+        <div className="flex flex-wrap gap-3 justify-center mb-10 animate-fade-in-up">
+          {categories.map((cat) => {
+            const IconComponent = cat.icon;
+            return (
+              <button
+                key={cat.value}
+                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all ${
+                  selectedCategory === cat.value
+                    ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 shadow-md hover:shadow-lg hover:-translate-y-0.5'
+                }`}
+                onClick={() => handleCategoryChange(cat.value)}
+              >
+                <IconComponent className="w-5 h-5" />
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
         </div>
-      </div>
 
-      {/* Products Grid */}
-      {products.length === 0 ? (
-        <div className="no-products">
-          <div className="no-products-icon">🔍</div>
-          <h3>No products found</h3>
-          <p>Try adjusting your search or filters</p>
-        </div>
-      ) : (
-        <>
-          <div className="shop-products-grid">
-            {products.map((product) => (
-              <div key={product._id} className="shop-product-card">
-                <div className="product-image-placeholder">
-                  <span className="product-emoji">
-                    {product.category === 'Books' ? '📚' :
-                     product.category === 'Electronics' ? '💻' :
-                     product.category === 'Furniture' ? '🛋️' :
-                     product.category === 'Clothing' ? '👕' : '📦'}
-                  </span>
-                </div>
-                
-                {product.category && (
-                  <span className="category">{product.category}</span>
-                )}
-                
-                <h3 className="product-title">{product.title}</h3>
-                
-                <div className="price">${product.price.toFixed(2)}</div>
-                
-                {product.description && (
-                  <p className="description">
-                    {product.description.substring(0, 80)}
-                    {product.description.length > 80 && '...'}
-                  </p>
-                )}
-                
-                {product.seller && (
-                  <p className="seller">👤 {product.seller.name}</p>
-                )}
-                
+        {/* Products Grid */}
+        {products.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center max-w-md mx-auto animate-fade-in">
+            <Search className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">No products found</h3>
+            <p className="text-gray-600">Try adjusting your search or filters</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in-up">
+              {products.map((product) => {
+                const CategoryIcon = getCategoryIcon(product.category);
+                return (
+                  <div 
+                    key={product._id} 
+                    className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-gray-100 group"
+                  >
+                    <div className="relative h-56 bg-gradient-to-br from-primary-100 to-purple-100 flex items-center justify-center overflow-hidden">
+                      {product.mainImage ? (
+                        <img 
+                          src={product.mainImage} 
+                          alt={product.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      ) : (
+                        <CategoryIcon className="w-24 h-24 text-primary-500 group-hover:scale-110 transition-transform duration-300" />
+                      )}
+                      {product.category && (
+                        <span className="absolute top-3 right-3 bg-primary-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+                          {product.category}
+                        </span>
+                      )}
+                      {product.condition && (
+                        <span className="absolute top-3 left-3 bg-white/90 text-gray-800 px-3 py-1.5 rounded-full text-xs font-semibold">
+                          {product.condition}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="p-5">
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                        {product.title}
+                      </h3>
+                      
+                      <div className="text-2xl font-extrabold text-primary-600 flex items-center gap-1">
+                        {formatINR(product.price)}
+                      </div>
+                      
+                      {product.description && (
+                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                          {product.description}
+                        </p>
+                      )}
+                      
+                      {product.seller && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                          <User className="w-4 h-4" />
+                          <span>{product.seller.name}</span>
+                        </div>
+                      )}
+                      
+                      <button 
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold rounded-xl hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 active:scale-95"
+                        onClick={() => navigate(`/product/${product._id}`)}
+                      >
+                        <Info className="w-5 h-5" />
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-12 animate-fade-in">
                 <button 
-                  className="btn-info"
-                  onClick={() => setSelectedProduct(product)}
+                  className="flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-semibold rounded-xl shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 transition-all"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
                 >
-                  ℹ️ View Details
+                  <ChevronLeft className="w-5 h-5" />
+                  Previous
+                </button>
+                <span className="px-6 py-3 bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-bold rounded-xl shadow-lg">
+                  Page {page} of {totalPages}
+                </span>
+                <button 
+                  className="flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-semibold rounded-xl shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 transition-all"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
+        )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button 
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                ← Previous
-              </button>
-              <span className="page-info">
-                Page {page} of {totalPages}
-              </span>
-              <button 
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-              >
-                Next →
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Product Details Modal */}
-      {selectedProduct && (
-        <ProductDetailsModal 
-          product={selectedProduct}
-          currentUser={currentUser}
-          onClose={() => setSelectedProduct(null)}
-        />
-      )}
+      </div>
     </div>
   );
 }

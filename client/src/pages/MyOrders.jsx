@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getMyOrders } from '../api';
+import { formatINR } from '../utils/currency';
 
 function MyOrders() {
   const [orders, setOrders] = useState([]);
@@ -88,7 +89,7 @@ function MyOrders() {
                       {item.product?.title || 'Product'} × {item.quantity}
                     </span>
                     <span>
-                      ${((item.product?.price || 0) * item.quantity).toFixed(2)}
+                      {formatINR((item.product?.price || 0) * item.quantity)}
                     </span>
                   </div>
                 ))}

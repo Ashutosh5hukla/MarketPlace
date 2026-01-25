@@ -83,3 +83,23 @@ export const getMyOrders = async () => {
   });
   return response.data;
 };
+
+// Razorpay API
+export const createRazorpayOrder = async (orderData) => {
+  const response = await axios.post(`${API_URL}/orders/razorpay/create`, orderData, {
+    headers: getAuthHeader()
+  });
+  return response.data;
+};
+
+export const verifyRazorpayPayment = async (paymentData) => {
+  const response = await axios.post(`${API_URL}/orders/razorpay/verify`, paymentData, {
+    headers: getAuthHeader()
+  });
+  return response.data;
+};
+
+export const getRazorpayKey = async () => {
+  const response = await axios.get(`${API_URL}/orders/razorpay/key`);
+  return response.data;
+};
