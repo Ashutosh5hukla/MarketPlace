@@ -99,6 +99,35 @@ export const verifyRazorpayPayment = async (paymentData) => {
   return response.data;
 };
 
+// Upload API
+export const uploadImage = async (file) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  
+  const response = await axios.post(`${API_URL}/upload/image`, formData, {
+    headers: {
+      ...getAuthHeader(),
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return response.data;
+};
+
+export const uploadImages = async (files) => {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('images', file);
+  });
+  
+  const response = await axios.post(`${API_URL}/upload/images`, formData, {
+    headers: {
+      ...getAuthHeader(),
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return response.data;
+};
+
 export const getRazorpayKey = async () => {
   const response = await axios.get(`${API_URL}/orders/razorpay/key`);
   return response.data;

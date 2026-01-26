@@ -14,9 +14,17 @@ function Shop() {
   const [search, setSearch] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [isNewUser, setIsNewUser] = useState(false);
 
   useEffect(() => {
     setCurrentUser(getCurrentUser());
+    // Check if user just signed up
+    const newUserFlag = localStorage.getItem('isNewUser');
+    if (newUserFlag === 'true') {
+      setIsNewUser(true);
+      // Clear the flag after reading it
+      localStorage.removeItem('isNewUser');
+    }
   }, []);
 
   useEffect(() => {
@@ -86,14 +94,19 @@ function Shop() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
-      <div className="container mx-auto max-w-7xl">
+    <div className="min-h-screen w-full max-w-full bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 overflow-x-hidden">
+      <div className="container mx-auto max-w-7xl w-full px-4">
         {/* Shop Header */}
         <div className="text-center mb-10 animate-fade-in-down">
           <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">
-            Welcome back, {currentUser?.name || 'Shopper'}! 👋
+            {isNewUser ? 'Welcome' : 'Welcome back'}, {currentUser?.name || 'Shopper'}! 👋
           </h1>
-          <p className="text-gray-600 text-lg">Discover amazing products tailored just for you</p>
+          <p className="text-gray-600 text-lg">
+            {isNewUser 
+              ? 'Start discovering amazing products tailored just for you' 
+              : 'Discover amazing products tailored just for you'
+            }
+          </p>
         </div>
 
         {/* Search Bar */}

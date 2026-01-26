@@ -27,6 +27,8 @@ function Login({ setUser }) {
     try {
       const userData = await login(formData);
       setUser(userData);
+      // Remove new user flag for returning users
+      localStorage.removeItem('isNewUser');
       navigate('/shop');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -36,7 +38,7 @@ function Login({ setUser }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-500 via-purple-500 to-secondary-500 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-br from-primary-500 via-purple-500 to-secondary-500 flex items-center justify-center px-4 py-12">
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '40px 40px' }}></div>
       </div>

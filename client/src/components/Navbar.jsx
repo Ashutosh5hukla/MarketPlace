@@ -63,16 +63,18 @@ function Navbar({ user, setUser }) {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-      <div className="container mx-auto px-4">
+    <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/50 shadow-sm w-full">
+      <div className="container mx-auto px-4 max-w-full">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div 
-            className="flex items-center gap-2 cursor-pointer hover:scale-105 transition-transform"
+            className="flex items-center gap-2 cursor-pointer hover:scale-105 transition-transform duration-200"
             onClick={() => navigate('/')}
           >
-            <ShoppingCart className="w-7 h-7 text-primary-500" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-lg">
+              <ShoppingCart className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
               ShopHub
             </span>
           </div>
@@ -96,14 +98,14 @@ function Navbar({ user, setUser }) {
               <>
                 <Link 
                   to="/shop" 
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-700 font-medium hover:bg-gray-100 hover:text-primary-500 transition-all"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-gray-700 font-medium hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50 hover:text-primary-600 transition-all duration-200"
                 >
                   <Store className="w-4 h-4" />
                   Shop
                 </Link>
                 <Link 
                   to="/rent" 
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-700 font-medium hover:bg-gray-100 hover:text-primary-500 transition-all"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-gray-700 font-medium hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50 hover:text-primary-600 transition-all duration-200"
                 >
                   <Tag className="w-4 h-4" />
                   Rent
@@ -111,7 +113,7 @@ function Navbar({ user, setUser }) {
                 {(user.role === 'seller' || user.role === 'admin') && (
                   <Link 
                     to="/products/create" 
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-700 font-medium hover:bg-gray-100 hover:text-primary-500 transition-all"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-gray-700 font-medium hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50 hover:text-primary-600 transition-all duration-200"
                   >
                     <PlusCircle className="w-4 h-4" />
                     Sell
@@ -122,15 +124,15 @@ function Navbar({ user, setUser }) {
               <>
                 <Link 
                   to="/login" 
-                  className="px-4 py-2 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-all"
+                  className="px-5 py-2 rounded-xl text-gray-700 font-semibold hover:bg-gray-100 transition-all duration-200"
                 >
                   Login
                 </Link>
                 <Link 
                   to="/register" 
-                  className="px-6 py-2 rounded-lg bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200"
                 >
-                  Register
+                  Get Started
                 </Link>
               </>
             )}
@@ -142,12 +144,12 @@ function Navbar({ user, setUser }) {
               {/* Cart Icon */}
               <Link 
                 to="/cart" 
-                className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="relative p-2.5 rounded-xl hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50 transition-all duration-200 group"
                 aria-label="Shopping cart"
               >
-                <ShoppingCart className="w-6 h-6 text-gray-700" />
+                <ShoppingCart className="w-6 h-6 text-gray-700 group-hover:text-primary-600 transition-colors" />
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-primary-500 to-secondary-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-pulse">
                     {cartItemCount}
                   </span>
                 )}
@@ -156,15 +158,15 @@ function Navbar({ user, setUser }) {
               {/* Profile Dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button 
-                  className="flex items-center gap-2 p-1.5 pr-3 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-2 p-1.5 pr-3 rounded-xl hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50 transition-all duration-200"
                   onClick={toggleProfileDropdown}
                   aria-expanded={isProfileOpen}
                   aria-label="User menu"
                 >
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 text-white flex items-center justify-center font-bold text-sm shadow-md">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 text-white flex items-center justify-center font-bold text-sm shadow-md ring-2 ring-white">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isProfileOpen && (
@@ -216,7 +218,7 @@ function Navbar({ user, setUser }) {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 animate-fade-in-down">
+          <div className="md:hidden py-4 border-t border-gray-200 animate-fade-in-down w-full">
             {user ? (
               <div className="flex flex-col gap-2">
                 <Link 

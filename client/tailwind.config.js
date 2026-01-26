@@ -20,10 +20,19 @@ export default {
           900: '#2a3382',
         },
         secondary: {
+          50: '#faf5ff',
+          100: '#f3e8ff',
+          200: '#e9d5ff',
+          300: '#d8b4fe',
+          400: '#c084fc',
           500: '#764ba2',
           600: '#6a3f8f',
           700: '#5d357c',
         }
+      },
+      maxWidth: {
+        'full': '100%',
+        'screen': '100vw',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',

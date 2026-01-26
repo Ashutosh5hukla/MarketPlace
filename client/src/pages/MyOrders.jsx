@@ -31,7 +31,8 @@ function MyOrders() {
   }
 
   return (
-    <div>
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gray-50 py-8 px-4">
+      <div className="container mx-auto max-w-5xl">
       <h2 style={{ marginBottom: '2rem', color: '#2c3e50' }}>My Orders</h2>
       
       {orders.length === 0 ? (
@@ -98,6 +99,7 @@ function MyOrders() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

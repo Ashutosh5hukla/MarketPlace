@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createProduct } from '../api';
+import { createProduct, uploadImages } from '../api';
 import { 
   Package, IndianRupee, FileText, Tag, Image as ImageIcon, 
   Upload, X, CheckCircle2, AlertCircle, Loader2, ArrowLeft, Sparkles,
@@ -21,6 +21,7 @@ function CreateProduct() {
     videoUrl: ''
   });
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -119,6 +120,8 @@ function CreateProduct() {
     }
 
     const newPreviews = [];
+    const newFiles = [];
+    
     files.forEach(file => {
       if (file.size > 5 * 1024 * 1024) {
         setErrors({
@@ -128,6 +131,7 @@ function CreateProduct() {
         return;
       }
 
+      newFiles.push(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         newPreviews.push({
@@ -136,6 +140,7 @@ function CreateProduct() {
         });
         if (newPreviews.length === files.length) {
           setImagePreviews([...imagePreviews, ...newPreviews]);
+          setImageFiles([...imageFiles, ...newFiles]);
         }
       };
       reader.readAsDataURL(file);
@@ -152,7 +157,9 @@ function CreateProduct() {
 
   const removeImage = (index) => {
     const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    const newFiles = imageFiles.filter((_, i) => i !== index);
     setImagePreviews(newPreviews);
+    setImageFiles(newFiles);
     
     // Adjust main image index if needed
     if (mainImageIndex === index) {
@@ -168,30 +175,53 @@ function CreateProduct() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Form submitted!');
+    console.log('Form data:', formData);
+    console.log('Image files:', imageFiles);
     
     if (!validateForm()) {
+      console.log('Validation failed');
       return;
     }
 
     setLoading(true);
+    setErrors({}); // Clear previous errors
 
     try {
-      // Prepare images array with main image flag
-      const images = imagePreviews.map((preview, index) => ({
-        url: preview.url,
-        isMain: index === mainImageIndex
-      }));
+      // Upload images to Cloudinary first (if any)
+      let uploadedImages = [];
+      if (imageFiles.length > 0) {
+        console.log('Uploading images to Cloudinary...');
+        try {
+          const uploadedData = await uploadImages(imageFiles);
+          console.log('Images uploaded successfully:', uploadedData);
+          uploadedImages = uploadedData.map((img, index) => ({
+            url: img.url,
+            publicId: img.publicId,
+            isMain: index === mainImageIndex
+          }));
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError);
+          setErrors({
+            submit: 'Failed to upload images. Please try again.'
+          });
+          setLoading(false);
+          return;
+        }
+      }
 
       const productData = {
         ...formData,
         price: parseFloat(formData.price),
-        images,
+        images: uploadedImages,
         damageCondition: formData.damageCondition.level !== 'None' 
           ? formData.damageCondition 
           : { level: 'None', description: '' }
       };
       
+      console.log('Creating product with data:', productData);
       await createProduct(productData);
+      console.log('Product created successfully!');
       
       // Show success message
       setShowSuccess(true);
@@ -203,17 +233,23 @@ function CreateProduct() {
         price: '',
         category: '',
         condition: 'New',
-        images: []
+        damageCondition: {
+          level: 'None',
+          description: ''
+        },
+        videoUrl: ''
       });
       setImagePreviews([]);
+      setImageFiles([]);
       
       // Navigate after delay
       setTimeout(() => {
         navigate('/shop');
       }, 2000);
     } catch (err) {
+      console.error('Product creation error:', err);
       setErrors({
-        submit: err.response?.data?.message || 'Failed to create product'
+        submit: err.response?.data?.message || err.message || 'Failed to create product. Please try again.'
       });
     } finally {
       setLoading(false);
@@ -230,7 +266,7 @@ function CreateProduct() {
   const maxDescriptionLength = 500;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4">
       {/* Success Toast */}
       {showSuccess && (
         <div className="fixed top-4 right-4 bg-white rounded-xl shadow-2xl p-4 flex items-center gap-3 animate-fade-in-down z-50 border-2 border-green-500">
