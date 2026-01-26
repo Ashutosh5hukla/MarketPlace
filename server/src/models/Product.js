@@ -23,6 +23,7 @@ const productSchema = new mongoose.Schema({
     isMain: { type: Boolean, default: false }
   }],
   videoUrl: String,
+  location: String,
   seller: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

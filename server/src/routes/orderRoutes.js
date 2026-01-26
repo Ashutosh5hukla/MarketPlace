@@ -4,13 +4,13 @@ import {
   getMyOrders,
   getAllOrders,
   getOrderById,
-  updateOrderStatus
+  updateOrderStatus,
+  sendMessage,
+  getOrderMessages
 } from "../controllers/orderController.js";
 import {
-  createRazorpayOrder,
-  verifyRazorpayPayment,
-  getRazorpayKey
-} from "../controllers/razorpayController.js";
+  processPayment
+} from "../controllers/paymentController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -21,9 +21,11 @@ router.get("/", protect, authorize("admin"), getAllOrders);
 router.get("/:id", protect, getOrderById);
 router.put("/:id/status", protect, authorize("admin"), updateOrderStatus);
 
-// Razorpay routes
-router.post("/razorpay/create", protect, createRazorpayOrder);
-router.post("/razorpay/verify", protect, verifyRazorpayPayment);
-router.get("/razorpay/key", getRazorpayKey);
+// Chat routes
+router.post("/:id/messages", protect, sendMessage);
+router.get("/:id/messages", protect, getOrderMessages);
+
+// Payment routes
+router.post("/payment/process", protect, processPayment);
 
 export default router;

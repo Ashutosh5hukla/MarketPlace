@@ -84,16 +84,31 @@ export const getMyOrders = async () => {
   return response.data;
 };
 
-// Razorpay API
-export const createRazorpayOrder = async (orderData) => {
-  const response = await axios.post(`${API_URL}/orders/razorpay/create`, orderData, {
+export const getOrderById = async (id) => {
+  const response = await axios.get(`${API_URL}/orders/${id}`, {
     headers: getAuthHeader()
   });
   return response.data;
 };
 
-export const verifyRazorpayPayment = async (paymentData) => {
-  const response = await axios.post(`${API_URL}/orders/razorpay/verify`, paymentData, {
+export const sendOrderMessage = async (orderId, message) => {
+  const response = await axios.post(`${API_URL}/orders/${orderId}/messages`, 
+    { message }, 
+    { headers: getAuthHeader() }
+  );
+  return response.data;
+};
+
+export const getOrderMessages = async (orderId) => {
+  const response = await axios.get(`${API_URL}/orders/${orderId}/messages`, {
+    headers: getAuthHeader()
+  });
+  return response.data;
+};
+
+// Payment API
+export const processPayment = async (paymentData) => {
+  const response = await axios.post(`${API_URL}/orders/payment/process`, paymentData, {
     headers: getAuthHeader()
   });
   return response.data;
@@ -125,10 +140,5 @@ export const uploadImages = async (files) => {
       'Content-Type': 'multipart/form-data'
     }
   });
-  return response.data;
-};
-
-export const getRazorpayKey = async () => {
-  const response = await axios.get(`${API_URL}/orders/razorpay/key`);
   return response.data;
 };
