@@ -14,6 +14,7 @@ import MyOrders from "./pages/MyOrders";
 import OrderDetails from "./pages/OrderDetails";
 import Rent from "./pages/Rent";
 import Cart from "./pages/Cart";
+import Wishlist from "./pages/Wishlist";
 import Profile from "./pages/Profile";
 import ProductDetails from "./pages/ProductDetails";
 
@@ -154,6 +155,22 @@ function App() {
               element={
                 <ProtectedRoute user={user}>
                   <Cart />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route              path="/wishlist"
+              element={
+                <ProtectedRoute user={user}>
+                  <Wishlist />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route              path="/wishlist"
+              element={
+                <ProtectedRoute user={user}>
+                  <Wishlist />
                 </ProtectedRoute>
               }
             />

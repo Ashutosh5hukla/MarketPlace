@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createOrder } from '../api';
+import { processPayment } from '../api';
 import { formatINR } from '../utils/currency';
 import { ShoppingCart, Trash2, Plus, Minus, ShoppingBag, Tag, Calendar, Clock, AlertCircle, Sparkles, IndianRupee } from 'lucide-react';
+import PaymentModal from '../components/PaymentModal';
 
 function Cart() {
   const [cartItems, setCartItems] = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -14,7 +18,14 @@ function Cart() {
 
   const loadCart = () => {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    setCartItems(cart);
+    // Ensure each item has a unique cartId
+    const cartWithIds = cart.map(item => ({
+      ...item,
+      cartId: item.cartId || `${item._id}_${Date.now()}_${Math.random()}`
+    }));
+    setCartItems(cartWithIds);
+    // Update localStorage with cartIds
+    localStorage.setItem('cart', JSON.stringify(cartWithIds));
   };
 
   const removeFromCart = (cartId) => {
@@ -54,23 +65,74 @@ function Cart() {
       return;
     }
 
-    try {
-      // Create a single order with all cart items
-      const orderData = {
-        items: cartItems.map(item => ({
-          product: item._id,
-          quantity: item.quantity || 1
-        }))
-      };
-      
-      await createOrder(orderData);
+    // Open payment modal for entire cart
+    setSelectedItem(null);
+    setShowPaymentModal(true);
+  };
 
-      // Clear cart after successful checkout
-      clearCart();
-      alert('Order placed successfully!');
-      navigate('/orders');
+  const handleBuyNow = (item) => {
+    // Open payment modal for specific item
+    setSelectedItem(item);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = async (paymentData) => {
+    setIsProcessing(true);
+    
+    try {
+      let totalAmount;
+      let paymentPayload;
+
+      // Check if buying single item or entire cart
+      if (selectedItem) {
+        // Single item purchase
+        totalAmount = (selectedItem.type === 'rental' ? selectedItem.rentalPrice : selectedItem.price) * (selectedItem.quantity || 1);
+        paymentPayload = {
+          ...paymentData,
+          productId: selectedItem._id,
+          quantity: selectedItem.quantity || 1,
+          totalAmount: totalAmount
+        };
+      } else {
+        // Full cart checkout
+        totalAmount = parseFloat(getTotalPrice());
+        paymentPayload = {
+          ...paymentData,
+          cartItems: cartItems.map(item => ({
+            productId: item._id,
+            quantity: item.quantity || 1,
+            price: item.type === 'rental' ? item.rentalPrice : (item.price || 0)
+          })),
+          totalAmount: totalAmount
+        };
+      }
+
+      // Process payment with backend
+      const response = await processPayment(paymentPayload);
+
+      if (response.success) {
+        setShowPaymentModal(false);
+        
+        // Remove purchased items from cart
+        if (selectedItem) {
+          // Remove only the purchased item
+          removeFromCart(selectedItem.cartId);
+          alert('Payment successful! Your order has been placed.');
+        } else {
+          // Remove all items (full cart checkout)
+          clearCart();
+          alert('Payment successful! Your order has been placed.');
+        }
+        
+        navigate('/orders');
+      } else {
+        throw new Error(response.message || 'Payment failed');
+      }
     } catch (error) {
-      alert('Error placing order: ' + (error.response?.data?.message || error.message));
+      console.error('Payment error:', error);
+      alert('Error processing payment: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -142,12 +204,24 @@ function Cart() {
               >
                 <div className="flex flex-col sm:flex-row gap-6">
                   {/* Product Image */}
-                  <div className="relative w-full sm:w-32 h-48 sm:h-32 flex-shrink-0 rounded-xl overflow-hidden">
-                    <img 
-                      src={item.image || 'https://via.placeholder.com/150'} 
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="relative w-full sm:w-32 h-48 sm:h-32 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100">
+                    {item.images && item.images.length > 0 ? (
+                      <img 
+                        src={typeof item.images[0] === 'string' ? item.images[0] : item.images[0].url} 
+                        alt={item.title || item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : item.mainImage ? (
+                      <img 
+                        src={item.mainImage} 
+                        alt={item.title || item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ShoppingCart className="w-12 h-12 text-gray-300" />
+                      </div>
+                    )}
                     {item.type === 'rental' && (
                       <span className="absolute bottom-2 left-2 bg-primary-500 text-white text-xs font-bold px-2.5 py-1 rounded-full backdrop-blur-sm bg-opacity-90">
                         RENTAL
@@ -158,32 +232,44 @@ function Cart() {
                   <div className="flex-1 flex flex-col">
                     {/* Product Name */}
                     <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {item.name}
+                      {item.title || item.name}
                     </h3>
                     
                     {/* Rental Info or Description */}
                     {item.type === 'rental' ? (
                       <div className="space-y-1.5 mb-3">
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <Clock className="w-4 h-4 text-primary-500" />
-                          <span className="font-medium">Duration:</span>
-                          <span className="font-semibold text-gray-900">
-                            {getDurationLabel(item.rentalDuration)}
+                        <div className="flex items-center text-primary-600">
+                          <Clock className="w-4 h-4 mr-1.5" />
+                          <span className="text-sm font-medium">
+                            Duration: {item.rentalDuration}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <Calendar className="w-4 h-4 text-primary-500" />
-                          <span className="font-medium">Start Date:</span>
-                          <span className="font-semibold text-gray-900">
-                            {item.rentalStartDate}
-                          </span>
-                        </div>
+                        {item.rentalStartDate && (
+                          <div className="flex items-center text-gray-600">
+                            <Calendar className="w-4 h-4 mr-1.5" />
+                            <span className="text-sm">
+                              From: {new Date(item.rentalStartDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                        {item.description?.substring(0, 80)}...
+                        {item.description}
                       </p>
                     )}
+
+                    {/* Category & Condition */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="px-3 py-1 bg-primary-50 text-primary-600 text-xs font-semibold rounded-full">
+                        {item.category || 'General'}
+                      </span>
+                      {item.condition && (
+                        <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">
+                          {item.condition}
+                        </span>
+                      )}
+                    </div>
 
                     {/* Price and Actions */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mt-auto">
@@ -196,7 +282,7 @@ function Cart() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         {/* Quantity Control */}
                         {!item.type || item.type !== 'rental' ? (
                           <div className="flex items-center gap-2 bg-gray-100 rounded-xl p-1">
@@ -221,6 +307,14 @@ function Cart() {
                             Qty: 1
                           </div>
                         )}
+
+                        {/* Buy Now Button */}
+                        <button
+                          className="px-4 py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all text-sm"
+                          onClick={() => handleBuyNow(item)}
+                        >
+                          Buy Now
+                        </button>
 
                         {/* Remove Button */}
                         <button 
@@ -277,6 +371,27 @@ function Cart() {
             </div>
           </div>
         </div>
+
+        {/* Payment Modal */}
+        {showPaymentModal && (
+          <PaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => !isProcessing && setShowPaymentModal(false)}
+            product={
+              selectedItem 
+                ? {
+                    title: selectedItem.title || selectedItem.name,
+                    price: (selectedItem.type === 'rental' ? selectedItem.rentalPrice : selectedItem.price) * (selectedItem.quantity || 1)
+                  }
+                : {
+                    title: `Cart Items (${cartItems.length} items)`,
+                    price: parseFloat(getTotalPrice())
+                  }
+            }
+            quantity={1}
+            onSuccess={handlePaymentSuccess}
+          />
+        )}
       </div>
     </div>
   );

@@ -36,11 +36,38 @@ function ProductDetails() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
 
   useEffect(() => {
     setCurrentUser(getCurrentUser());
     fetchProduct();
+    checkWishlistStatus();
   }, [id]);
+
+  const checkWishlistStatus = () => {
+    const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+    setIsInWishlist(wishlist.some(item => item._id === id));
+  };
+
+  const toggleWishlist = () => {
+    const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+    
+    if (isInWishlist) {
+      // Remove from wishlist
+      const updatedWishlist = wishlist.filter(item => item._id !== product._id);
+      localStorage.setItem('wishlist', JSON.stringify(updatedWishlist));
+      setIsInWishlist(false);
+      window.dispatchEvent(new Event('wishlistUpdated'));
+      alert('Removed from wishlist');
+    } else {
+      // Add to wishlist
+      wishlist.push(product);
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+      setIsInWishlist(true);
+      window.dispatchEvent(new Event('wishlistUpdated'));
+      alert('Added to wishlist!');
+    }
+  };
 
   const fetchProduct = async () => {
     try {
@@ -136,10 +163,16 @@ function ProductDetails() {
     if (existingItemIndex > -1) {
       cart[existingItemIndex].quantity += quantity;
     } else {
-      cart.push({ ...product, quantity });
+      // Add unique cartId for each item
+      cart.push({ 
+        ...product, 
+        quantity,
+        cartId: `${product._id}_${Date.now()}` // Unique identifier
+      });
     }
     
     localStorage.setItem('cart', JSON.stringify(cart));
+    window.dispatchEvent(new Event('cartUpdated'));
     alert('Added to cart!');
   };
 
@@ -431,6 +464,18 @@ function ProductDetails() {
                     >
                       <ShoppingCart className="w-5 h-5" />
                       Add to Cart
+                    </button>
+
+                    <button
+                      onClick={toggleWishlist}
+                      className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 font-bold rounded-lg border-2 transition-all ${
+                        isInWishlist 
+                          ? 'bg-red-50 text-red-600 border-red-500 hover:bg-red-100' 
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-red-500 hover:text-red-600'
+                      }`}
+                    >
+                      <Heart className={`w-5 h-5 ${isInWishlist ? 'fill-red-600' : ''}`} />
+                      {isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
                     </button>
 
                     {product.seller && (
