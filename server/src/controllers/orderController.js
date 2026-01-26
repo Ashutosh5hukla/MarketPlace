@@ -120,3 +120,84 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Send message to order chat
+// @route   POST /api/orders/:id/messages
+// @access  Private
+export const sendMessage = async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ message: "Message is required" });
+    }
+
+    const order = await Order.findById(req.params.id)
+      .populate("buyer", "name email")
+      .populate("items.product");
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Check if user is the buyer or the seller of any product in the order
+    const isBuyer = order.buyer._id.toString() === req.user._id.toString();
+    const isSeller = order.items.some(item => 
+      item.product.seller && item.product.seller.toString() === req.user._id.toString()
+    );
+
+    if (!isBuyer && !isSeller) {
+      return res.status(403).json({ message: "Not authorized to send messages for this order" });
+    }
+
+    // Only allow chat for completed payments
+    if (order.paymentStatus !== "completed") {
+      return res.status(403).json({ message: "Chat is only available for completed orders" });
+    }
+
+    order.messages.push({
+      sender: req.user._id,
+      message: message.trim(),
+      timestamp: new Date()
+    });
+
+    await order.save();
+
+    // Populate the sender info for the new message
+    await order.populate("messages.sender", "name email");
+
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get order messages
+// @route   GET /api/orders/:id/messages
+// @access  Private
+export const getOrderMessages = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate("buyer", "name email")
+      .populate("items.product")
+      .populate("messages.sender", "name email");
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Check if user is the buyer or the seller
+    const isBuyer = order.buyer._id.toString() === req.user._id.toString();
+    const isSeller = order.items.some(item => 
+      item.product.seller && item.product.seller.toString() === req.user._id.toString()
+    );
+
+    if (!isBuyer && !isSeller) {
+      return res.status(403).json({ message: "Not authorized to view messages for this order" });
+    }
+
+    res.json(order.messages);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

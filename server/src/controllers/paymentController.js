@@ -7,26 +7,61 @@ import Product from "../models/Product.js";
 // @access  Private
 export const processPayment = async (req, res) => {
   try {
-    const { productId, quantity, totalAmount, cardNumber, cardHolder, timestamp } = req.body;
+    const { productId, cartItems, quantity, totalAmount, cardNumber, cardHolder, timestamp } = req.body;
 
-    if (!productId || !quantity || !totalAmount) {
+    if (!totalAmount) {
       return res.status(400).json({
         success: false,
         message: "Missing required payment information"
       });
     }
 
-    // Get product to verify amount
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({
+    let items = [];
+    let calculatedAmount = 0;
+
+    // Handle cart checkout (multiple items)
+    if (cartItems && cartItems.length > 0) {
+      for (const cartItem of cartItems) {
+        const product = await Product.findById(cartItem.productId);
+        if (!product) {
+          return res.status(404).json({
+            success: false,
+            message: `Product ${cartItem.productId} not found`
+          });
+        }
+
+        items.push({
+          product: cartItem.productId,
+          quantity: cartItem.quantity || 1
+        });
+
+        calculatedAmount += product.price * (cartItem.quantity || 1);
+      }
+    } 
+    // Handle single product purchase
+    else if (productId && quantity) {
+      const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: "Product not found"
+        });
+      }
+
+      items.push({
+        product: productId,
+        quantity: quantity
+      });
+
+      calculatedAmount = product.price * quantity;
+    } else {
+      return res.status(400).json({
         success: false,
-        message: "Product not found"
+        message: "Either productId or cartItems is required"
       });
     }
 
     // Verify amount matches
-    const calculatedAmount = product.price * quantity;
     if (Math.abs(calculatedAmount - totalAmount) > 0.01) {
       return res.status(400).json({
         success: false,
@@ -42,12 +77,7 @@ export const processPayment = async (req, res) => {
     const order = await Order.create({
       user: req.user._id,
       buyer: req.user._id,
-      items: [
-        {
-          product: productId,
-          quantity: quantity,
-        },
-      ],
+      items: items,
       totalAmount,
       paymentId,
       orderId,

@@ -12,7 +12,8 @@ import {
   PlusCircle,
   Settings,
   LogOut,
-  Package
+  Package,
+  Heart
 } from 'lucide-react';
 
 function Navbar({ user, setUser }) {
@@ -20,6 +21,7 @@ function Navbar({ user, setUser }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [wishlistItemCount, setWishlistItemCount] = useState(0);
   const dropdownRef = useRef(null);
 
   // Load cart count from localStorage
@@ -33,6 +35,19 @@ function Navbar({ user, setUser }) {
     // Listen for cart updates
     window.addEventListener('cartUpdated', updateCartCount);
     return () => window.removeEventListener('cartUpdated', updateCartCount);
+  }, []);
+
+  // Load wishlist count from localStorage
+  useEffect(() => {
+    const updateWishlistCount = () => {
+      const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+      setWishlistItemCount(wishlist.length);
+    };
+    
+    updateWishlistCount();
+    // Listen for wishlist updates
+    window.addEventListener('wishlistUpdated', updateWishlistCount);
+    return () => window.removeEventListener('wishlistUpdated', updateWishlistCount);
   }, []);
 
   // Close dropdown when clicking outside
@@ -138,9 +153,23 @@ function Navbar({ user, setUser }) {
             )}
           </div>
 
-          {/* Right Side - Cart & Profile */}
+          {/* Right Side - Wishlist, Cart & Profile */}
           {user && (
             <div className="hidden md:flex items-center gap-4">
+              {/* Wishlist Icon */}
+              <Link 
+                to="/wishlist" 
+                className="relative p-2.5 rounded-xl hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50 transition-all duration-200 group"
+                aria-label="Wishlist"
+              >
+                <Heart className="w-6 h-6 text-gray-700 group-hover:text-red-600 transition-colors" />
+                {wishlistItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-pulse">
+                    {wishlistItemCount}
+                  </span>
+                )}
+              </Link>
+
               {/* Cart Icon */}
               <Link 
                 to="/cart" 
@@ -183,6 +212,19 @@ function Navbar({ user, setUser }) {
                       >
                         <User className="w-5 h-5" />
                         <span className="font-medium text-sm">My Profile</span>
+                      </Link>
+                      <Link 
+                        to="/wishlist" 
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                        onClick={closeDropdown}
+                      >
+                        <Heart className="w-5 h-5" />
+                        <span className="font-medium text-sm">My Wishlist</span>
+                        {wishlistItemCount > 0 && (
+                          <span className="ml-auto bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                            {wishlistItemCount}
+                          </span>
+                        )}
                       </Link>
                       <Link 
                         to="/orders" 
@@ -247,6 +289,14 @@ function Navbar({ user, setUser }) {
                     Sell
                   </Link>
                 )}
+                <Link 
+                  to="/wishlist" 
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Heart className="w-5 h-5" />
+                  Wishlist {wishlistItemCount > 0 && `(${wishlistItemCount})`}
+                </Link>
                 <Link 
                   to="/cart" 
                   className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"

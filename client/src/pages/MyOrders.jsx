@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getMyOrders } from '../api';
 import { formatINR } from '../utils/currency';
 import { Package, Calendar, Clock, CheckCircle, XCircle, Loader2, ShoppingBag } from 'lucide-react';
 
 function MyOrders() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -97,7 +99,11 @@ function MyOrders() {
       ) : (
         <div className="space-y-6 animate-fade-in-up">
           {orders.map((order) => (
-            <div key={order._id} className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all">
+            <div 
+              key={order._id} 
+              className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all cursor-pointer"
+              onClick={() => navigate(`/orders/${order._id}`)}
+            >
               {/* Order Header */}
               <div className="bg-gradient-to-r from-primary-50 to-purple-50 px-6 py-4 border-b border-gray-100">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">

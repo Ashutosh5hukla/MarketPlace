@@ -37,7 +37,22 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ["pending", "completed", "failed"],
     default: "pending"
-  }
+  },
+  messages: [{
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    message: {
+      type: String,
+      required: true
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 }, { timestamps: true });
 
 export default mongoose.model("Order", orderSchema);
