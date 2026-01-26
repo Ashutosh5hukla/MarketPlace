@@ -96,6 +96,24 @@
     }
   }
 
+  @keyframes typing {
+    from {
+      width: 0;
+    }
+    to {
+      width: 100%;
+    }
+  }
+
+  @keyframes blink-caret {
+    from, to {
+      border-color: transparent;
+    }
+    50% {
+      border-color: #667eea;
+    }
+  }
+
   .animate-fade-in {
     animation: fade-in 0.5s ease-out;
   }
@@ -118,6 +136,16 @@
 
   .animate-float {
     animation: float 6s ease-in-out infinite;
+  }
+
+  .typing-text {
+    overflow: hidden;
+    border-right: 3px solid #667eea;
+    white-space: nowrap;
+    animation: 
+      typing 3.5s steps(40, end),
+      blink-caret 0.75s step-end infinite;
+    display: inline-block;
   }
 
   /* Modern Footer Styles */

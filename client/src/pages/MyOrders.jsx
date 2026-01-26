@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getMyOrders } from '../api';
 import { formatINR } from '../utils/currency';
+import { Package, Calendar, Clock, CheckCircle, XCircle, Loader2, ShoppingBag } from 'lucide-react';
 
 function MyOrders() {
   const [orders, setOrders] = useState([]);
@@ -22,78 +23,146 @@ function MyOrders() {
     }
   };
 
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'completed':
+        return 'bg-green-100 text-green-700 border-green-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-700 border-red-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      default:
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch(status) {
+      case 'completed':
+        return <CheckCircle className="w-5 h-5" />;
+      case 'cancelled':
+        return <XCircle className="w-5 h-5" />;
+      default:
+        return <Clock className="w-5 h-5" />;
+    }
+  };
+
   if (loading) {
-    return <div className="loading">Loading your orders ..</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 text-primary-500 animate-spin mx-auto mb-4" />
+          <p className="text-xl font-semibold text-gray-700">Loading your orders...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="error-message">{error}</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-8 text-center max-w-md">
+          <p className="text-red-600 font-semibold text-lg">{error}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gray-50 py-8 px-4">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4">
       <div className="container mx-auto max-w-5xl">
-      <h2 style={{ marginBottom: '2rem', color: '#2c3e50' }}>My Orders</h2>
+        {/* Header */}
+        <div className="mb-10 animate-fade-in-down">
+          <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-primary-600 via-purple-600 to-secondary-600 bg-clip-text text-transparent mb-3">
+            My Orders
+          </h1>
+          <p className="text-gray-600 text-lg">Track and manage your purchases</p>
+        </div>
       
       {orders.length === 0 ? (
-        <div className="loading">No orders yet</div>
+        <div className="bg-white rounded-2xl shadow-lg p-12 text-center animate-fade-in">
+          <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-primary-100 to-purple-100 rounded-full flex items-center justify-center">
+            <Package className="w-12 h-12 text-primary-500" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">No orders yet</h3>
+          <p className="text-gray-600 mb-6">Start shopping to see your orders here!</p>
+          <button 
+            className="px-8 py-3.5 bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold rounded-xl hover:shadow-xl hover:-translate-y-0.5 transition-all"
+            onClick={() => window.location.href = '/shop'}
+          >
+            <ShoppingBag className="w-5 h-5 inline mr-2" />
+            Browse Shop
+          </button>
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="space-y-6 animate-fade-in-up">
           {orders.map((order) => (
-            <div key={order._id} style={{
-              backgroundColor: 'white',
-              padding: '1.5rem',
-              borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <div>
-                  <h3 style={{ color: '#2c3e50', marginBottom: '0.5rem' }}>
-                    Order #{order._id.substring(0, 8)}
-                  </h3>
-                  <p style={{ color: '#7f8c8d', fontSize: '0.9rem' }}>
-                    {new Date(order.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ 
-                    fontSize: '1.5rem', 
-                    fontWeight: 'bold', 
-                    color: '#27ae60' 
-                  }}>
-                    ${order.totalAmount.toFixed(2)}
+            <div key={order._id} className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all">
+              {/* Order Header */}
+              <div className="bg-gradient-to-r from-primary-50 to-purple-50 px-6 py-4 border-b border-gray-100">
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-lg">
+                      <Package className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Order #{order._id.substring(0, 8).toUpperCase()}
+                      </h3>
+                      <div className="flex items-center gap-2 text-gray-600 text-sm mt-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{new Date(order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                      </div>
+                    </div>
                   </div>
-                  <span style={{
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '20px',
-                    fontSize: '0.875rem',
-                    backgroundColor: order.status === 'completed' ? '#d4edda' : 
-                                   order.status === 'cancelled' ? '#f8d7da' : '#fff3cd',
-                    color: order.status === 'completed' ? '#155724' : 
-                           order.status === 'cancelled' ? '#721c24' : '#856404'
-                  }}>
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600 mb-1">Total Amount</div>
+                      <div className="text-3xl font-extrabold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
+                        {formatINR(order.totalAmount)}
+                      </div>
+                    </div>
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold border-2 ${getStatusColor(order.status)}`}>
+                      {getStatusIcon(order.status)}
+                      <span className="capitalize">{order.status}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              <div style={{ borderTop: '1px solid #ecf0f1', paddingTop: '1rem' }}>
-                <h4 style={{ color: '#555', marginBottom: '0.75rem' }}>Items:</h4>
-                {order.items.map((item, index) => (
-                  <div key={index} style={{ 
-                    padding: '0.5rem 0', 
-                    display: 'flex', 
-                    justifyContent: 'space-between',
-                    color: '#7f8c8d'
-                  }}>
-                    <span>
-                      {item.product?.title || 'Product'} × {item.quantity}
-                    </span>
-                    <span>
-                      {formatINR((item.product?.price || 0) * item.quantity)}
-                    </span>
-                  </div>
-                ))}
+              {/* Order Items */}
+              <div className="p-6">
+                <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-primary-500" />
+                  Order Items
+                </h4>
+                <div className="space-y-3">
+                  {order.items.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-purple-100 rounded-lg flex items-center justify-center">
+                          <Package className="w-8 h-8 text-primary-500" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900">
+                            {item.product?.title || 'Product'}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            Quantity: {item.quantity}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg text-gray-900">
+                          {formatINR((item.product?.price || 0) * item.quantity)}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {formatINR(item.product?.price || 0)} each
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           ))}

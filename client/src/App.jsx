@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 import Navbar from "./components/Navbar";
@@ -30,6 +30,22 @@ const SellerRoute = ({ user, children }) => {
     : <Navigate to="/" />;
 };
 
+// Layout wrapper to conditionally show Navbar/Footer
+function Layout({ user, setUser, children }) {
+  const location = useLocation();
+  const hideNavAndFooter = location.pathname === '/login' || location.pathname === '/register';
+
+  return (
+    <>
+      {!hideNavAndFooter && <Navbar user={user} setUser={setUser} />}
+      <div className="main-content w-full">
+        {children}
+      </div>
+      {!hideNavAndFooter && <Footer />}
+    </>
+  );
+}
+
 
 // ---------- App Component ----------
 function App() {
@@ -50,9 +66,7 @@ function App() {
     >
       <div className="App w-full min-h-screen overflow-x-hidden">
 
-        <Navbar user={user} setUser={setUser} />
-
-        <div className="main-content w-full">
+        <Layout user={user} setUser={setUser}>
 
           <Routes>
 
@@ -157,9 +171,7 @@ function App() {
 
           </Routes>
 
-        </div>
-
-        <Footer />
+        </Layout>
 
       </div>
     </Router>

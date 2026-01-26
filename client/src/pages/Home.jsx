@@ -12,27 +12,23 @@ function Home() {
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden">
       {/* Hero Section */}
-      <section className="relative min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-gray-100 overflow-hidden">
+      <section className="relative min-h-screen w-full bg-gradient-to-br from-gray-50 via-white to-gray-100 overflow-hidden flex items-center">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #667eea 1px, transparent 0)', backgroundSize: '40px 40px' }}></div>
         </div>
 
-        <div className="relative container mx-auto px-4 py-20 lg:py-32">
+        <div className="relative container mx-auto px-4 py-12">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left Content */}
             <div className="space-y-8 animate-fade-in-down">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-50 rounded-full">
-                <Sparkles className="w-4 h-4 text-primary-600" />
-                <span className="text-sm font-semibold text-primary-600">ShopHub - Your Shopping Destination</span>
-              </div>
               
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight">
                 <span className="text-gray-900">Discover Amazing</span>
                 <br />
                 <span className="text-gray-900">Products,</span>
                 <br />
-                <span className="bg-gradient-to-r from-primary-600 via-purple-600 to-secondary-600 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-primary-600 via-purple-600 to-secondary-600 bg-clip-text text-transparent typing-text">
                   Shop with Style
                 </span>
               </h1>
