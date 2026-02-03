@@ -12,8 +12,10 @@ import Register from "./pages/Register";
 import ProductList from "./pages/ProductList";
 import CreateProduct from "./pages/CreateProduct";
 import MyOrders from "./pages/MyOrders";
+import OrderDetails from "./pages/OrderDetails";
 import Rent from "./pages/Rent";
 import Cart from "./pages/Cart";
+import Wishlist from "./pages/Wishlist";
 import Profile from "./pages/Profile";
 import ProductDetails from "./pages/ProductDetails";
 
@@ -172,6 +174,24 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ProductList />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/orders/:id"
+                element={
+                  <ProtectedRoute>
+                    <OrderDetails />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/wishlist"
+                element={
+                  <ProtectedRoute>
+                    <Wishlist />
                   </ProtectedRoute>
                 }
               />

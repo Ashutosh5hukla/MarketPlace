@@ -4,8 +4,13 @@ import {
   getMyOrders,
   getAllOrders,
   getOrderById,
-  updateOrderStatus
+  updateOrderStatus,
+  sendMessage,
+  getOrderMessages
 } from "../controllers/orderController.js";
+import {
+  processPayment
+} from "../controllers/paymentController.js";
 import {
   createRazorpayOrder,
   verifyRazorpayPayment,
@@ -23,6 +28,13 @@ router.get("/my", protect, authorize("buyer"), getMyOrders);
 router.get("/", protect, authorize("admin"), getAllOrders);
 router.get("/:id", protect, getOrderById);
 router.put("/:id/status", protect, authorize("admin"), updateOrderStatus);
+
+// Chat routes
+router.post("/:id/messages", protect, sendMessage);
+router.get("/:id/messages", protect, getOrderMessages);
+
+// Payment routes
+router.post("/payment/process", protect, processPayment);
 
 // Razorpay routes - buyer only (sellers don't purchase)
 router.post("/razorpay/create", protect, authorize("buyer"), createRazorpayOrder);
