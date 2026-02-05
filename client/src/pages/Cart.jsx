@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { processPayment } from '../api';
 import { formatINR } from '../utils/currency';
 import { ShoppingCart, Trash2, Plus, Minus, ShoppingBag, Tag, Calendar, Clock, AlertCircle, Sparkles, IndianRupee } from 'lucide-react';
-import PaymentModal from '../components/PaymentModal';
+import RazorpayPaymentModal from '../components/RazorpayPaymentModal';
 
 function Cart() {
   const [cartItems, setCartItems] = useState([]);
@@ -374,21 +374,25 @@ function Cart() {
 
         {/* Payment Modal */}
         {showPaymentModal && (
-          <PaymentModal
+          <RazorpayPaymentModal
             isOpen={showPaymentModal}
             onClose={() => !isProcessing && setShowPaymentModal(false)}
             product={
               selectedItem 
                 ? {
+                    _id: selectedItem._id,
                     title: selectedItem.title || selectedItem.name,
-                    price: (selectedItem.type === 'rental' ? selectedItem.rentalPrice : selectedItem.price) * (selectedItem.quantity || 1)
+                    price: (selectedItem.type === 'rental' ? selectedItem.rentalPrice : selectedItem.price),
+                    images: selectedItem.images
                   }
                 : {
+                    _id: 'cart',
                     title: `Cart Items (${cartItems.length} items)`,
-                    price: parseFloat(getTotalPrice())
+                    price: parseFloat(getTotalPrice()),
+                    images: cartItems[0]?.images || []
                   }
             }
-            quantity={1}
+            quantity={selectedItem ? (selectedItem.quantity || 1) : 1}
             onSuccess={handlePaymentSuccess}
           />
         )}

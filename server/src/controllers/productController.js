@@ -123,15 +123,15 @@ export const updateProduct = async (req, res) => {
 
     const { title, description, price, category, condition, damageCondition, images, videoUrl } = req.body;
 
-    product.title = title || product.title;
-    product.description = description || product.description;
-    product.price = price || product.price;
-    product.category = category || product.category;
-    product.condition = condition || product.condition;
-    product.damageCondition = damageCondition || product.damageCondition;
+    product.title = title !== undefined ? title : product.title;
+    product.description = description !== undefined ? description : product.description;
+    product.price = price !== undefined ? price : product.price;
+    product.category = category !== undefined ? category : product.category;
+    product.condition = condition !== undefined ? condition : product.condition;
+    product.damageCondition = damageCondition !== undefined ? damageCondition : product.damageCondition;
     product.videoUrl = videoUrl !== undefined ? videoUrl : product.videoUrl;
     
-    if (images) {
+    if (images !== undefined) {
       product.images = images;
     }
 

@@ -39,12 +39,16 @@ export const getCurrentUser = () => {
 
 // Products API
 export const getProducts = async (params = {}) => {
-  const response = await axios.get(`${API_URL}/products`, { params });
+  const response = await axios.get(`${API_URL}/products`, { 
+    params: { ...params, _t: Date.now() } // Cache busting
+  });
   return response.data;
 };
 
 export const getProductById = async (id) => {
-  const response = await axios.get(`${API_URL}/products/${id}`);
+  const response = await axios.get(`${API_URL}/products/${id}`, {
+    params: { _t: Date.now() } // Cache busting
+  });
   return response.data;
 };
 

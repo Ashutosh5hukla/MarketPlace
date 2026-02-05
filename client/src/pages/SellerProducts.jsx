@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getProducts, deleteProduct } from '../api';
 import { formatINR } from '../utils/currency';
@@ -7,6 +7,7 @@ import { Package, Plus, Edit, Trash2, Eye, Search, Filter, Image as ImageIcon } 
 
 function SellerProducts() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -16,7 +17,7 @@ function SellerProducts() {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [location]); // Refetch when location changes (after navigation back)
 
   useEffect(() => {
     filterProducts();
@@ -28,6 +29,10 @@ function SellerProducts() {
       const data = await getProducts({ limit: 100 });
       // Filter only seller's products
       const myProducts = data.products.filter(p => p.seller?._id === user._id);
+      console.log('My products:', myProducts); // Debug log
+      myProducts.forEach(p => {
+        console.log(`Product: ${p.title}, Images:`, p.images);
+      });
       setProducts(myProducts);
     } catch (error) {
       console.error('Failed to fetch products:', error);
@@ -152,11 +157,22 @@ function SellerProducts() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.map((product) => {
-              // Get main image or first image
-              const mainImage = product.images?.find(img => img.isMain)?.url || 
-                               product.images?.[0]?.url || 
-                               product.mainImage ||
-                               'https://via.placeholder.com/400x300?text=No+Image';
+              // Get main image or first image with better handling
+              let mainImage = 'https://via.placeholder.com/400x300?text=No+Image';
+              
+              if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+                // Try to find main image
+                const mainImg = product.images.find(img => img.isMain);
+                if (mainImg) {
+                  mainImage = typeof mainImg === 'string' ? mainImg : mainImg.url;
+                } else {
+                  // Use first image
+                  const firstImg = product.images[0];
+                  mainImage = typeof firstImg === 'string' ? firstImg : firstImg.url;
+                }
+              } else if (product.mainImage) {
+                mainImage = product.mainImage;
+              }
               
               return (
                 <div key={product._id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow">
@@ -166,6 +182,7 @@ function SellerProducts() {
                       alt={product.title}
                       className="w-full h-full object-cover"
                       onError={(e) => {
+                        console.error('Image failed to load:', mainImage);
                         e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
                       }}
                     />

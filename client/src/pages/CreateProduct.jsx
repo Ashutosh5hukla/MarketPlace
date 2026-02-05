@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createProduct, uploadImages } from '../api';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { createProduct, uploadImages, getProductById, updateProduct } from '../api';
 import { 
   Package, IndianRupee, FileText, Tag, Image as ImageIcon, 
   Upload, X, CheckCircle2, AlertCircle, Loader2, ArrowLeft, Sparkles,
@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 
 function CreateProduct() {
+  const { id } = useParams(); // Get product ID from URL if editing
+  const isEditMode = Boolean(id);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -26,7 +28,56 @@ function CreateProduct() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(isEditMode);
   const navigate = useNavigate();
+
+  // Load product data if in edit mode
+  useEffect(() => {
+    if (isEditMode && id) {
+      loadProductData();
+    }
+  }, [isEditMode, id]);
+
+  const loadProductData = async () => {
+    try {
+      setInitialLoading(true);
+      const product = await getProductById(id);
+      
+      setFormData({
+        title: product.title || '',
+        description: product.description || '',
+        price: product.price?.toString() || '',
+        category: product.category || '',
+        condition: product.condition || 'New',
+        damageCondition: product.damageCondition || {
+          level: 'None',
+          description: ''
+        },
+        videoUrl: product.videoUrl || ''
+      });
+
+      // Load existing images
+      if (product.images && product.images.length > 0) {
+        const previews = product.images.map(img => ({
+          url: typeof img === 'string' ? img : img.url,
+          publicId: typeof img === 'string' ? null : img.publicId,
+          isExisting: true
+        }));
+        setImagePreviews(previews);
+        
+        // Find main image index
+        const mainIndex = product.images.findIndex(img => img.isMain);
+        setMainImageIndex(mainIndex >= 0 ? mainIndex : 0);
+      }
+    } catch (error) {
+      console.error('Failed to load product:', error);
+      setErrors({
+        submit: 'Failed to load product data. Please try again.'
+      });
+    } finally {
+      setInitialLoading(false);
+    }
+  };
 
   const categories = [
     { value: 'Books', label: 'Books & Media', icon: '📚' },
@@ -57,10 +108,10 @@ function CreateProduct() {
       newErrors.description = 'Description must be at least 10 characters';
     }
 
-    if (!formData.price) {
+    if (formData.price === '' || formData.price === null || formData.price === undefined) {
       newErrors.price = 'Price is required';
-    } else if (parseFloat(formData.price) <= 0) {
-      newErrors.price = 'Price must be greater than 0';
+    } else if (parseFloat(formData.price) < 0) {
+      newErrors.price = 'Price cannot be negative';
     } else if (parseFloat(formData.price) > 10000000) {
       newErrors.price = 'Price must be less than ₹1,00,00,000';
     }
@@ -136,7 +187,8 @@ function CreateProduct() {
       reader.onloadend = () => {
         newPreviews.push({
           url: reader.result,
-          name: file.name
+          name: file.name,
+          isExisting: false // Mark as new image
         });
         if (newPreviews.length === files.length) {
           setImagePreviews([...imagePreviews, ...newPreviews]);
@@ -156,10 +208,18 @@ function CreateProduct() {
   };
 
   const removeImage = (index) => {
+    const imageToRemove = imagePreviews[index];
     const newPreviews = imagePreviews.filter((_, i) => i !== index);
-    const newFiles = imageFiles.filter((_, i) => i !== index);
     setImagePreviews(newPreviews);
-    setImageFiles(newFiles);
+    
+    // Only remove from imageFiles if it's a new image (not existing)
+    if (!imageToRemove.isExisting) {
+      // Find the index in imageFiles array (only new images are in this array)
+      const existingImagesCount = imagePreviews.slice(0, index).filter(img => img.isExisting).length;
+      const fileIndex = index - existingImagesCount;
+      const newFiles = imageFiles.filter((_, i) => i !== fileIndex);
+      setImageFiles(newFiles);
+    }
     
     // Adjust main image index if needed
     if (mainImageIndex === index) {
@@ -188,17 +248,31 @@ function CreateProduct() {
     setErrors({}); // Clear previous errors
 
     try {
-      // Upload images to Cloudinary first (if any)
-      let uploadedImages = [];
+      // Separate existing and new images
+      const existingImages = imagePreviews
+        .filter(img => img.isExisting)
+        .map((img, index) => ({
+          url: img.url,
+          publicId: img.publicId || null,
+          isMain: index === mainImageIndex && imageFiles.length === 0 ? true : false
+        }));
+      
+      let newUploadedImages = [];
+      
+      // Upload new images to Cloudinary if any
       if (imageFiles.length > 0) {
-        console.log('Uploading images to Cloudinary...');
+        console.log('Uploading new images to Cloudinary...');
         try {
           const uploadedData = await uploadImages(imageFiles);
           console.log('Images uploaded successfully:', uploadedData);
-          uploadedImages = uploadedData.map((img, index) => ({
+          
+          // Calculate the offset for main image index (after existing images)
+          const existingCount = existingImages.length;
+          
+          newUploadedImages = uploadedData.map((img, index) => ({
             url: img.url,
             publicId: img.publicId,
-            isMain: index === mainImageIndex
+            isMain: (existingCount + index) === mainImageIndex
           }));
         } catch (uploadError) {
           console.error('Image upload error:', uploadError);
@@ -209,19 +283,33 @@ function CreateProduct() {
           return;
         }
       }
+      
+      // Combine existing and new images, maintaining order
+      const allImages = [...existingImages, ...newUploadedImages];
+      
+      // Ensure at least one image is marked as main
+      if (allImages.length > 0 && !allImages.some(img => img.isMain)) {
+        allImages[mainImageIndex] = { ...allImages[mainImageIndex], isMain: true };
+      }
 
       const productData = {
         ...formData,
         price: parseFloat(formData.price),
-        images: uploadedImages,
+        images: allImages,
         damageCondition: formData.damageCondition.level !== 'None' 
           ? formData.damageCondition 
           : { level: 'None', description: '' }
       };
       
-      console.log('Creating product with data:', productData);
-      await createProduct(productData);
-      console.log('Product created successfully!');
+      console.log(isEditMode ? 'Updating product with data:' : 'Creating product with data:', productData);
+      
+      if (isEditMode) {
+        await updateProduct(id, productData);
+        console.log('Product updated successfully!');
+      } else {
+        await createProduct(productData);
+        console.log('Product created successfully!');
+      }
       
       // Show success message
       setShowSuccess(true);
@@ -258,12 +346,24 @@ function CreateProduct() {
 
   const isFormValid = formData.title.trim() && 
                        formData.description.trim() && 
-                       formData.price && 
+                       formData.price !== '' && 
                        formData.category &&
-                       parseFloat(formData.price) > 0;
+                       parseFloat(formData.price) >= 0;
 
   const descriptionLength = formData.description.length;
   const maxDescriptionLength = 500;
+
+  // Show loading spinner while fetching product data in edit mode
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-gray-700">Loading Product...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4">
@@ -274,7 +374,9 @@ function CreateProduct() {
             <CheckCircle2 className="w-6 h-6 text-white" />
           </div>
           <div>
-            <div className="font-bold text-gray-900">Product Created!</div>
+            <div className="font-bold text-gray-900">
+              {isEditMode ? 'Product Updated!' : 'Product Created!'}
+            </div>
             <div className="text-sm text-gray-600">Redirecting to your products...</div>
           </div>
         </div>
@@ -291,9 +393,11 @@ function CreateProduct() {
             Back
           </button>
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-secondary-600 mb-2">
-            List a New Product
+            {isEditMode ? 'Edit Product' : 'List a New Product'}
           </h1>
-          <p className="text-gray-600 text-lg">Fill in the details to start selling</p>
+          <p className="text-gray-600 text-lg">
+            {isEditMode ? 'Update your product details' : 'Fill in the details to start selling'}
+          </p>
         </div>
 
         {/* Main Form Card */}
@@ -632,12 +736,12 @@ function CreateProduct() {
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Creating Product...
+                    {isEditMode ? 'Updating Product...' : 'Creating Product...'}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    Create Product
+                    {isEditMode ? 'Update Product' : 'Create Product'}
                   </>
                 )}
               </button>

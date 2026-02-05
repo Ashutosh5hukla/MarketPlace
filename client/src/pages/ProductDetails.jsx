@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getProductById, createOrder, processPayment } from '../api';
 import { formatINR } from '../utils/currency';
-import PaymentModal from '../components/PaymentModal';
+import RazorpayPaymentModal from '../components/RazorpayPaymentModal';
 import { 
   ShoppingCart, 
   Heart, 
@@ -550,7 +550,7 @@ function ProductDetails() {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <PaymentModal
+        <RazorpayPaymentModal
           isOpen={showPaymentModal}
           onClose={() => !isProcessing && setShowPaymentModal(false)}
           product={product}

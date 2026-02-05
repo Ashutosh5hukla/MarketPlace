@@ -9,9 +9,7 @@ import {
   getOrderMessages
 } from "../controllers/orderController.js";
 import {
-  processPayment
-} from "../controllers/paymentController.js";
-import {
+  processPayment,
   createRazorpayOrder,
   verifyRazorpayPayment,
   getRazorpayKey
