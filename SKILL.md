@@ -1,3 +1,8 @@
+---
+name: MarketPlace
+description: A comprehensive full-stack e-commerce marketplace built with the MERN stack (MongoDB, Express, React, Node.js). This platform supports both product sales and rentals, featuring role-based access control (RBAC), integrated payment processing with Razorpay, and cloud-based image management with Cloudinary.
+---
+
 # MarketPlace - Full-Stack E-Commerce Platform
 
 ## Description
