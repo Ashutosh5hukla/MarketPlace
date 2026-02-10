@@ -342,6 +342,24 @@ function Navbar() {
                   Wishlist {wishlistItemCount > 0 && `(${wishlistItemCount})`}
                 </Link>
                 <Link 
+                  to="/rent" 
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Tag className="w-5 h-5" />
+                  Rent
+                </Link>
+                {(user.role === 'seller' || user.role === 'admin') && (
+                  <Link 
+                    to="/products/create" 
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <PlusCircle className="w-5 h-5" />
+                    Sell
+                  </Link>
+                )}
+                <Link 
                   to="/cart" 
                   className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
