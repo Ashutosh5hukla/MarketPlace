@@ -546,18 +546,18 @@ function ProductDetails() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Payment Modal */}
-      {showPaymentModal && (
-        <RazorpayPaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => !isProcessing && setShowPaymentModal(false)}
-          product={product}
-          quantity={quantity}
-          onSuccess={handlePaymentSuccess}
-        />
-      )}
+        {/* Payment Modal */}
+        {showPaymentModal && (
+          <RazorpayPaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => !isProcessing && setShowPaymentModal(false)}
+            product={product}
+            quantity={quantity}
+            onSuccess={handlePaymentSuccess}
+          />
+        )}
+      </div>
     </div>
   );
 }
