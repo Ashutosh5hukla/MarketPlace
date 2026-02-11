@@ -1,13 +1,23 @@
-import { useState, useEffect } from 'react';
-import { getCurrentUser } from '../api';
+import { useState, useEffect, useRef } from 'react';
+import { getCurrentUser, uploadImage, updateProfile, getProfileStats } from '../api';
+import { useAuth } from '../contexts/AuthContext';
+import { formatINR } from '../utils/currency';
 import { 
   User, Mail, Shield, Calendar, Package, ShoppingBag, 
   Edit2, Save, X, Camera, MapPin, Phone, Briefcase
 } from 'lucide-react';
 
 function Profile() {
+  const { updateUser } = useAuth();
+  const fileInputRef = useRef(null);
   const [user, setUser] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [uploadError, setUploadError] = useState('');
+  const [stats, setStats] = useState({ totalOrders: 0, productsListed: 0, totalSales: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -30,6 +40,28 @@ function Profile() {
     }
   }, []);
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setStatsLoading(true);
+        const data = await getProfileStats();
+        setStats({
+          totalOrders: data.totalOrders || 0,
+          productsListed: data.productsListed || 0,
+          totalSales: data.totalSales || 0
+        });
+      } catch (error) {
+        setStats({ totalOrders: 0, productsListed: 0, totalSales: 0 });
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    if (user?._id) {
+      fetchStats();
+    }
+  }, [user?._id]);
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -37,13 +69,19 @@ function Profile() {
     });
   };
 
-  const handleSave = () => {
-    // Here you would typically make an API call to update the user profile
-    // For now, we'll just update the local state
-    const updatedUser = { ...user, ...formData };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-    setIsEditing(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveError('');
+    try {
+      const updatedUser = await updateProfile(formData);
+      updateUser(updatedUser);
+      setUser(updatedUser);
+      setIsEditing(false);
+    } catch (error) {
+      setSaveError('Failed to update profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -55,6 +93,29 @@ function Profile() {
       bio: user.bio || ''
     });
     setIsEditing(false);
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadError('');
+    setIsUploading(true);
+    try {
+      const uploadResult = await uploadImage(file);
+      const updatedUser = await updateProfile({ profileImage: uploadResult.url });
+      updateUser(updatedUser);
+      setUser(updatedUser);
+    } catch (error) {
+      setUploadError('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploading(false);
+      event.target.value = '';
+    }
   };
 
   const formatDate = (date) => {
@@ -94,11 +155,36 @@ function Profile() {
               {/* Avatar */}
               <div className="relative">
                 <div className="w-40 h-40 rounded-full border-8 border-white bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center shadow-xl">
-                  <User className="w-20 h-20 text-white" />
+                  {user.profileImage ? (
+                    <img
+                      src={user.profileImage}
+                      alt="Profile"
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-20 h-20 text-white" />
+                  )}
                 </div>
-                <button className="absolute bottom-2 right-2 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors">
+                <button
+                  type="button"
+                  onClick={handleAvatarClick}
+                  className="absolute bottom-2 right-2 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors disabled:opacity-60"
+                  disabled={isUploading}
+                >
                   <Camera className="w-5 h-5 text-gray-600" />
                 </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+                {isUploading && (
+                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-sm text-gray-600">
+                    Uploading...
+                  </div>
+                )}
               </div>
 
               {/* Edit Button */}
@@ -115,10 +201,11 @@ function Profile() {
                   <div className="flex gap-3">
                     <button
                       onClick={handleSave}
-                      className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white font-bold rounded-xl hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                      className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white font-bold rounded-xl hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-70"
+                      disabled={isSaving}
                     >
                       <Save className="w-5 h-5" />
-                      Save
+                      {isSaving ? 'Saving...' : 'Save'}
                     </button>
                     <button
                       onClick={handleCancel}
@@ -131,6 +218,12 @@ function Profile() {
                 )}
               </div>
             </div>
+
+            {(saveError || uploadError) && (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {saveError || uploadError}
+              </div>
+            )}
 
             {/* User Details */}
             <div className="space-y-4">
@@ -241,7 +334,9 @@ function Profile() {
                 <Package className="w-7 h-7 text-white" />
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900">0</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {statsLoading ? '...' : stats.totalOrders}
+                </div>
                 <div className="text-gray-600">Total Orders</div>
               </div>
             </div>
@@ -255,7 +350,9 @@ function Profile() {
                     <ShoppingBag className="w-7 h-7 text-white" />
                   </div>
                   <div>
-                    <div className="text-3xl font-bold text-gray-900">0</div>
+                    <div className="text-3xl font-bold text-gray-900">
+                      {statsLoading ? '...' : stats.productsListed}
+                    </div>
                     <div className="text-gray-600">Products Listed</div>
                   </div>
                 </div>
@@ -267,7 +364,9 @@ function Profile() {
                     <Briefcase className="w-7 h-7 text-white" />
                   </div>
                   <div>
-                    <div className="text-3xl font-bold text-gray-900">₹0</div>
+                    <div className="text-3xl font-bold text-gray-900">
+                      {statsLoading ? '...' : formatINR(stats.totalSales)}
+                    </div>
                     <div className="text-gray-600">Total Sales</div>
                   </div>
                 </div>
