@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getProducts, getOrders } from '../api';
+import { getProducts, getSellerOrders, getProfileStats } from '../api';
 import { formatINR } from '../utils/currency';
 import { 
   Package, ShoppingBag, DollarSign, TrendingUp, 
-  Plus, Eye, Edit, BarChart3, Users, Clock 
+  Plus, Eye, Edit, BarChart3, Users, Clock, MessageCircle 
 } from 'lucide-react';
 
 function SellerDashboard() {
@@ -28,30 +28,21 @@ function SellerDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch seller's products
-      const productsData = await getProducts({ limit: 5 });
-      const myProducts = productsData.products.filter(p => p.seller?._id === user._id);
-      
-      // Fetch seller's orders
-      const ordersData = await getOrders();
-      const myOrders = ordersData.filter(order => 
-        order.items.some(item => item.product?.seller === user._id)
-      );
-
-      // Calculate stats
-      const totalRevenue = myOrders.reduce((sum, order) => sum + order.totalPrice, 0);
-      const pendingOrders = myOrders.filter(order => order.status === 'pending').length;
+      const [productsData, ordersData, statsData] = await Promise.all([
+        getProducts({ limit: 5, sellerId: user._id }),
+        getSellerOrders(),
+        getProfileStats()
+      ]);
 
       setStats({
-        totalProducts: myProducts.length,
-        totalOrders: myOrders.length,
-        totalRevenue,
-        pendingOrders
+        totalProducts: statsData.productsListed || 0,
+        totalOrders: statsData.totalOrders || 0,
+        totalRevenue: statsData.totalSales || 0,
+        pendingOrders: statsData.pendingOrders || 0
       });
 
-      setRecentProducts(myProducts.slice(0, 5));
-      setRecentOrders(myOrders.slice(0, 5));
+      setRecentProducts(productsData.products || []);
+      setRecentOrders((ordersData || []).slice(0, 5));
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     } finally {
@@ -134,7 +125,7 @@ function SellerDashboard() {
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <button
             onClick={() => navigate('/seller/products/create')}
             className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-4 rounded-xl font-semibold hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-xl flex items-center justify-center gap-2"
@@ -157,6 +148,14 @@ function SellerDashboard() {
           >
             <ShoppingBag className="w-5 h-5" />
             View Orders
+          </button>
+
+          <button
+            onClick={() => navigate('/seller/messages')}
+            className="bg-white text-gray-700 px-6 py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-md hover:shadow-xl flex items-center justify-center gap-2 border border-gray-200"
+          >
+            <MessageCircle className="w-5 h-5" />
+            Messages
           </button>
         </div>
 
@@ -184,19 +183,23 @@ function SellerDashboard() {
               <div className="space-y-3">
                 {recentProducts.map((product) => (
                   <div key={product._id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-12 h-12 rounded object-cover"
-                    />
+                    <div className="w-12 h-12 rounded bg-gray-100 overflow-hidden flex items-center justify-center">
+                      {product.mainImage || product.images?.[0]?.url ? (
+                        <img
+                          src={product.mainImage || product.images?.[0]?.url}
+                          alt={product.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="w-6 h-6 text-gray-400" />
+                      )}
+                    </div>
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{product.name}</p>
+                      <p className="font-medium text-gray-900">{product.title}</p>
                       <p className="text-sm text-gray-600">{formatINR(product.price)}</p>
                     </div>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                      Active
                     </span>
                   </div>
                 ))}
@@ -228,8 +231,7 @@ function SellerDashboard() {
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-medium text-gray-900">Order #{order._id.slice(-6)}</p>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                        order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'completed' ? 'bg-green-100 text-green-800' :
                         order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
@@ -238,7 +240,7 @@ function SellerDashboard() {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <p className="text-gray-600">{order.items.length} items</p>
-                      <p className="font-semibold text-gray-900">{formatINR(order.totalPrice)}</p>
+                      <p className="font-semibold text-gray-900">{formatINR(order.totalAmount || 0)}</p>
                     </div>
                   </div>
                 ))}

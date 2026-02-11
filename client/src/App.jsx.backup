@@ -1,0 +1,201 @@
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+
+
+
+// Layout wrapper to conditionally show Navbar/Footer
+function Layout({ children }) {
+  return (
+    <div className="main-content w-full">
+      {children}
+    </div>
+  );
+}
+
+
+// ---------- App Component ----------
+function App() {
+  return (
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
+      <AuthProvider>
+        <div className="App w-full min-h-screen overflow-x-hidden">
+          <Layout>
+            <Routes>
+
+              {/* Public Routes */}
+              <Route path="/" element={<Home />} />
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+
+              <Route path="/login" element={<Login />} />
+
+              <Route path="/register" element={<Register />} />
+
+              {/* Buyer-Only Routes */}
+              <Route
+                path="/shop"
+                element={
+                  <BuyerRoute>
+                    <Shop />
+                  </BuyerRoute>
+                }
+              />
+
+              <Route
+                path="/cart"
+                element={
+                  <BuyerRoute>
+                    <Cart />
+                  </BuyerRoute>
+                }
+              />
+
+              <Route
+                path="/rent"
+                element={
+                  <BuyerRoute>
+                    <Rent />
+                  </BuyerRoute>
+                }
+              />
+
+              <Route
+                path="/orders"
+                element={
+                  <BuyerRoute>
+                    <MyOrders />
+                  </BuyerRoute>
+                }
+              />
+
+              {/* Seller-Only Routes */}
+              <Route
+                path="/seller/dashboard"
+                element={
+                  <SellerRoute>
+                    <SellerDashboard />
+                  </SellerRoute>
+                }
+              />
+
+              <Route
+                path="/seller/products"
+                element={
+                  <SellerRoute>
+                    <SellerProducts />
+                  </SellerRoute>
+                }
+              />
+
+              <Route
+                path="/seller/products/create"
+                element={
+                  <SellerRoute>
+                    <CreateProduct />
+                  </SellerRoute>
+                }
+              />
+
+              <Route
+                path="/seller/products/edit/:id"
+                element={
+                  <SellerRoute>
+                    <CreateProduct />
+                  </SellerRoute>
+                }
+              />
+
+              <Route
+                path="/seller/orders"
+                element={
+                  <SellerRoute>
+                    <SellerOrders />
+                  </SellerRoute>
+                }
+              />
+
+              <Route
+                path="/seller/messages"
+                element={
+                  <SellerRoute>
+                    <Messages />
+                  </SellerRoute>
+                }
+              />
+
+              {/* Shared Protected Routes (Both Buyers & Sellers) */}
+              <Route
+                path="/products"
+                element={
+                  <ProtectedRoute>
+                    <ProductList />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/orders/:id"
+                element={
+                  <ProtectedRoute>
+                    <OrderDetails />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/wishlist"
+                element={
+                  <ProtectedRoute>
+                    <Wishlist />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/product/:id"
+                element={
+                  <ProtectedRoute>
+                    <ProductDetails />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <div style={{ padding: "2rem", textAlign: "center" }}>
+                      <h2>Settings Page</h2>
+                      <p>Settings page coming soon...</p>
+                    </div>
+                  </ProtectedRoute>
+                }
+              />
+
+            </Routes>
+          </Layout>
+        </div>
+      </AuthProvider>
+    </Router>
+  );
+}
+
+export default App;

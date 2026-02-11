@@ -6,7 +6,8 @@ import {
   getOrderById,
   updateOrderStatus,
   sendMessage,
-  getOrderMessages
+  getOrderMessages,
+  getSellerOrders
 } from "../controllers/orderController.js";
 import {
   processPayment,
@@ -24,6 +25,7 @@ router.get("/my", protect, authorize("buyer"), getMyOrders);
 
 // Admin-only routes
 router.get("/", protect, authorize("admin"), getAllOrders);
+router.get("/seller", protect, authorize("seller", "admin"), getSellerOrders);
 router.get("/:id", protect, getOrderById);
 router.put("/:id/status", protect, authorize("admin"), updateOrderStatus);
 

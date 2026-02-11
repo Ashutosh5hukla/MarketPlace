@@ -37,6 +37,36 @@ export const getCurrentUser = () => {
   return user ? JSON.parse(user) : null;
 };
 
+export const updateProfile = async (profileData) => {
+  const response = await axios.patch(`${API_URL}/auth/me`, profileData, {
+    headers: getAuthHeader()
+  });
+  return response.data;
+};
+
+export const getProfileStats = async () => {
+  const response = await axios.get(`${API_URL}/auth/me/stats`, {
+    headers: getAuthHeader()
+  });
+  return response.data;
+};
+
+export const getProductChat = async (productId, buyerId) => {
+  const params = buyerId ? { buyerId } : {};
+  const response = await axios.get(`${API_URL}/chat/product/${productId}`, {
+    headers: getAuthHeader(),
+    params
+  });
+  return response.data;
+};
+
+export const getSellerChats = async () => {
+  const response = await axios.get(`${API_URL}/chat/seller`, {
+    headers: getAuthHeader()
+  });
+  return response.data;
+};
+
 // Products API
 export const getProducts = async (params = {}) => {
   const response = await axios.get(`${API_URL}/products`, { 
@@ -91,6 +121,13 @@ export const getMyOrders = async () => {
 // Get all orders (for sellers/admin)
 export const getOrders = async () => {
   const response = await axios.get(`${API_URL}/orders`, {
+    headers: getAuthHeader()
+  });
+  return response.data;
+};
+
+export const getSellerOrders = async () => {
+  const response = await axios.get(`${API_URL}/orders/seller`, {
     headers: getAuthHeader()
   });
   return response.data;
@@ -174,3 +211,4 @@ export const uploadImages = async (files) => {
   });
   return response.data;
 };
+
