@@ -18,13 +18,13 @@ import {
   ChevronRight,
   Loader2,
   AlertTriangle,
-  Video,
   User,
   MapPin,
   CheckCircle2,
   CreditCard,
   MessageCircle,
-  X
+  X,
+  Send
 } from 'lucide-react';
 
 function ProductDetails() {
@@ -45,6 +45,18 @@ function ProductDetails() {
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState('');
   const socketRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  // Auto scroll to bottom of chat
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      scrollToBottom();
+    }
+  }, [chatMessages]);
 
   const socketUrl = (() => {
     const apiUrl = import.meta.env.VITE_API_URL || '/api';
@@ -88,10 +100,16 @@ function ProductDetails() {
 
     const handleMessage = (payload) => {
       setChatMessages((prev) => {
-        if (prev.some((msg) => msg._id === payload._id)) {
+        // Remove temporary message if it exists
+        const withoutTemp = prev.filter(msg => !String(msg._id).startsWith('temp-'));
+        
+        // Check if this message already exists
+        if (withoutTemp.some((msg) => msg._id === payload._id)) {
           return prev;
         }
-        return [...prev, payload];
+        
+        // Add the new message
+        return [...withoutTemp, payload];
       });
     };
 
@@ -250,13 +268,26 @@ function ProductDetails() {
       return;
     }
 
-    socketRef.current?.emit('sendProductMessage', {
-      productId: product._id,
-      text: chatInput.trim()
-    });
-
+    const messageText = chatInput.trim();
+    
+    // Optimistic UI update - add message immediately
+    const tempMessage = {
+      _id: `temp-${Date.now()}`,
+      message: messageText,
+      sender: currentUser?._id || currentUser?.id,
+      createdAt: new Date().toISOString(),
+      product: product._id
+    };
+    
+    setChatMessages(prev => [...prev, tempMessage]);
     setChatInput('');
     setChatError('');
+
+    // Send via socket
+    socketRef.current?.emit('sendProductMessage', {
+      productId: product._id,
+      text: messageText
+    });
   };
 
   if (loading) {
@@ -639,66 +670,168 @@ function ProductDetails() {
         )}
 
         {isChatOpen && product?.seller && (
-          <div className="fixed inset-0 z-50 flex justify-end bg-black/30">
-            <div className="w-full max-w-md h-full bg-white shadow-2xl flex flex-col">
-              <div className="flex items-center justify-between px-6 py-4 border-b">
-                <div>
-                  <p className="text-sm text-gray-500">Chatting with</p>
-                  <h3 className="text-lg font-semibold text-gray-900">{product.seller.name}</h3>
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
+            <div className="fixed right-0 top-0 w-full md:w-[450px] h-full bg-[#111b21] shadow-2xl flex flex-col">
+              {/* Chat Header - WhatsApp Style */}
+              <div className="bg-[#202c33] px-4 py-3 flex items-center justify-between border-b border-[#2a3942]">
+                <div className="flex items-center space-x-3 flex-1">
+                  {/* Seller Avatar */}
+                  {product.seller.image ? (
+                    <img
+                      src={product.seller.image}
+                      alt={product.seller.name}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#00a884] flex items-center justify-center">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                  )}
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-medium truncate">{product.seller.name}</h3>
+                    <p className="text-[#aebac1] text-xs truncate">
+                      {product.name}
+                    </p>
+                  </div>
                 </div>
+                
                 <button
                   onClick={() => setIsChatOpen(false)}
-                  className="p-2 rounded-full hover:bg-gray-100"
-                  aria-label="Close chat"
+                  className="text-[#aebac1] hover:text-white transition p-2"
                 >
-                  <X className="w-5 h-5 text-gray-600" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-gray-50">
+              {/* Chat Background Pattern */}
+              <div 
+                className="flex-1 overflow-y-auto px-4 py-4 space-y-2 scrollbar-thin scrollbar-thumb-[#374450] scrollbar-track-transparent relative"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                  backgroundColor: '#0b141a'
+                }}
+              >
                 {chatMessages.length === 0 ? (
-                  <div className="text-center text-gray-500 text-sm">
-                    Start the conversation with the seller.
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <MessageCircle className="w-16 h-16 text-[#374450] mx-auto mb-4" />
+                      <p className="text-[#aebac1] font-medium">No messages yet</p>
+                      <p className="text-[#667781] text-sm mt-2">Start chatting with the seller</p>
+                    </div>
                   </div>
                 ) : (
-                  chatMessages.map((message) => (
-                    <div
-                      key={message._id || message.id}
-                      className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow ${
-                        message.sender === (currentUser?._id || currentUser?.id)
-                          ? 'ml-auto bg-gradient-to-r from-primary-500 to-secondary-500 text-white'
-                          : 'bg-white text-gray-800'
-                      }`}
-                    >
-                      <p className="font-semibold text-xs mb-1">
-                        {message.sender === (currentUser?._id || currentUser?.id) ? 'You' : product.seller.name}
-                      </p>
-                      <p>{message.message || message.text}</p>
-                    </div>
-                  ))
+                  chatMessages.map((message, index) => {
+                    // Robust message sender comparison
+                    const messageSenderId = typeof message.sender === 'object' 
+                      ? (message.sender._id || message.sender.id)
+                      : message.sender;
+                    const currentUserId = currentUser?._id || currentUser?.id;
+                    const isOwnMessage = String(messageSenderId) === String(currentUserId);
+                    
+                    const showDateDivider = index === 0 || 
+                      new Date(chatMessages[index - 1].createdAt).toDateString() !== 
+                      new Date(message.createdAt).toDateString();
+
+                    return (
+                      <div key={message._id || message.id || index}>
+                        {/* Date Divider */}
+                        {showDateDivider && (
+                          <div className="flex justify-center my-4">
+                            <div className="bg-[#202c33] text-[#aebac1] text-xs px-3 py-1 rounded-md shadow-sm">
+                              {new Date(message.createdAt).toLocaleDateString('en-US', { 
+                                month: 'long', 
+                                day: 'numeric',
+                                year: 'numeric' 
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Message Bubble */}
+                        <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-1`}>
+                          <div
+                            className={`relative max-w-[75%] px-3 py-2 rounded-lg shadow-md ${
+                              isOwnMessage
+                                ? 'bg-[#005c4b] text-white'
+                                : 'bg-[#202c33] text-white'
+                            }`}
+                            style={{
+                              borderRadius: isOwnMessage 
+                                ? '8px 8px 0px 8px' 
+                                : '8px 8px 8px 0px'
+                            }}
+                          >
+                            {/* Sender Name (only for received messages) */}
+                            {!isOwnMessage && (
+                              <p className="text-[#00a884] text-xs font-semibold mb-1">
+                                {product.seller.name}
+                              </p>
+                            )}
+                            
+                            {/* Message Text */}
+                            <p className="text-sm leading-relaxed break-words pr-12">
+                              {message.message || message.text}
+                            </p>
+
+                            {/* Time */}
+                            <div className="absolute bottom-1 right-2">
+                              <span className={`text-[10px] ${
+                                isOwnMessage ? 'text-[#8696a0]' : 'text-[#667781]'
+                              }`}>
+                                {new Date(message.createdAt).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
+                {/* Auto-scroll anchor */}
+                <div ref={messagesEndRef} />
               </div>
 
-              <div className="border-t px-6 py-4">
-                {chatError && (
-                  <div className="mb-2 text-sm text-red-600">{chatError}</div>
-                )}
-                <div className="flex items-center gap-2">
+              {/* Message Input - WhatsApp Style */}
+              <div className="bg-[#202c33] px-4 py-3 flex items-center space-x-3">
+                <div className="flex-1 bg-[#2a3942] rounded-lg flex items-center px-4 py-2">
                   <input
                     type="text"
                     value={chatInput}
                     onChange={(event) => setChatInput(event.target.value)}
-                    placeholder="Type your message..."
-                    className="flex-1 rounded-xl border border-gray-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendChat();
+                      }
+                    }}
+                    placeholder="Type a message"
+                    className="flex-1 bg-transparent text-white text-sm placeholder-[#aebac1] focus:outline-none"
                   />
-                  <button
-                    onClick={handleSendChat}
-                    className="rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 px-4 py-3 text-white font-semibold"
-                  >
-                    Send
-                  </button>
                 </div>
+
+                <button
+                  onClick={handleSendChat}
+                  disabled={!chatInput.trim()}
+                  className={`p-2 rounded-full transition-all ${
+                    chatInput.trim()
+                      ? 'bg-[#00a884] hover:bg-[#06cf9c] text-white'
+                      : 'bg-[#374450] text-[#aebac1] cursor-not-allowed'
+                  }`}
+                >
+                  <Send className="w-5 h-5" />
+                </button>
               </div>
+
+              {/* Error Message */}
+              {chatError && (
+                <div className="bg-[#202c33] px-4 py-2 border-t border-[#2a3942]">
+                  <p className="text-red-400 text-sm">{chatError}</p>
+                </div>
+              )}
             </div>
           </div>
         )}

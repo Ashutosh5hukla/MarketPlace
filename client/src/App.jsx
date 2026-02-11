@@ -76,7 +76,7 @@ function App() {
               <Route path="/seller/products" element={<SellerRoute><Layout><SellerProducts /></Layout></SellerRoute>} />
               <Route path="/seller/products/create" element={<SellerRoute><Layout><CreateProduct /></Layout></SellerRoute>} />
               <Route path="/seller/orders" element={<SellerRoute><Layout><SellerOrders /></Layout></SellerRoute>} />
-              <Route path="/seller/messages" element={<SellerRoute><Layout><Messages /></Layout></SellerRoute>} />
+              <Route path="/seller/messages" element={<SellerRoute><Messages /></SellerRoute>} />
               
               {/* Shared Protected Routes */}
               <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
