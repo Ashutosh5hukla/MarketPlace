@@ -32,8 +32,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    const storedToken = localStorage.getItem('token');
+    const nextUser = storedToken && !userData.token
+      ? { ...userData, token: storedToken }
+      : userData;
+    setUser(nextUser);
+    localStorage.setItem('user', JSON.stringify(nextUser));
   };
 
   const isBuyer = () => user?.role === 'buyer';

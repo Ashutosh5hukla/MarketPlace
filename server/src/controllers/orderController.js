@@ -78,6 +78,29 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
+// @desc    Get orders for seller's products
+// @route   GET /api/orders/seller
+// @access  Private (Seller/Admin)
+export const getSellerOrders = async (req, res) => {
+  try {
+    const sellerProducts = await Product.find({ seller: req.user._id }).select('_id');
+    const productIds = sellerProducts.map((product) => product._id);
+
+    if (productIds.length === 0) {
+      return res.json([]);
+    }
+
+    const orders = await Order.find({ 'items.product': { $in: productIds } })
+      .populate('buyer', 'name email')
+      .populate('items.product')
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get order by ID
 // @route   GET /api/orders/:id
 // @access  Private

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getProductById, createOrder, processPayment } from '../api';
+import { getProductById, createOrder, processPayment, getProductChat } from '../api';
 import { formatINR } from '../utils/currency';
 import RazorpayPaymentModal from '../components/RazorpayPaymentModal';
+import { io } from 'socket.io-client';
 import { 
   ShoppingCart, 
   Heart, 
@@ -17,12 +18,13 @@ import {
   ChevronRight,
   Loader2,
   AlertTriangle,
-  Video,
   User,
   MapPin,
   CheckCircle2,
   CreditCard,
-  MessageCircle
+  MessageCircle,
+  X,
+  Send
 } from 'lucide-react';
 
 function ProductDetails() {
@@ -38,11 +40,85 @@ function ProductDetails() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatError, setChatError] = useState('');
+  const socketRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  // Auto scroll to bottom of chat
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      scrollToBottom();
+    }
+  }, [chatMessages]);
+
+  const socketUrl = (() => {
+    const apiUrl = import.meta.env.VITE_API_URL || '/api';
+    if (apiUrl.startsWith('http')) {
+      return apiUrl.replace(/\/api\/?$/, '');
+    }
+    return window.location.origin;
+  })();
 
   useEffect(() => {
     fetchProduct();
     checkWishlistStatus();
   }, [id]);
+
+  useEffect(() => {
+    if (!isChatOpen || !product?._id || !currentUser?._id) return;
+
+    const fetchChatHistory = async () => {
+      try {
+        const messages = await getProductChat(product._id);
+        setChatMessages(messages);
+      } catch (error) {
+        setChatError('Unable to load chat history.');
+      }
+    };
+
+    fetchChatHistory();
+  }, [isChatOpen, product?._id, currentUser?._id]);
+
+  useEffect(() => {
+    if (!isChatOpen || !currentUser?._id || !product?._id) return;
+
+    if (!socketRef.current) {
+      socketRef.current = io(socketUrl, {
+        auth: { token: localStorage.getItem('token') }
+      });
+    }
+
+    const socket = socketRef.current;
+    socket.emit('joinProductChat', { productId: product._id });
+
+    const handleMessage = (payload) => {
+      setChatMessages((prev) => {
+        // Remove temporary message if it exists
+        const withoutTemp = prev.filter(msg => !String(msg._id).startsWith('temp-'));
+        
+        // Check if this message already exists
+        if (withoutTemp.some((msg) => msg._id === payload._id)) {
+          return prev;
+        }
+        
+        // Add the new message
+        return [...withoutTemp, payload];
+      });
+    };
+
+    socket.on('productChatMessage', handleMessage);
+
+    return () => {
+      socket.off('productChatMessage', handleMessage);
+    };
+  }, [isChatOpen, product?._id, currentUser?._id, socketUrl]);
 
   const checkWishlistStatus = () => {
     const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
@@ -174,6 +250,44 @@ function ProductDetails() {
     localStorage.setItem('cart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cartUpdated'));
     alert('Added to cart!');
+  };
+
+  const handleOpenChat = () => {
+    if (!currentUser) {
+      alert('Please login to chat with the seller');
+      navigate('/login');
+      return;
+    }
+    setChatError('');
+    setIsChatOpen(true);
+  };
+
+  const handleSendChat = () => {
+    if (!chatInput.trim()) {
+      setChatError('Please enter a message.');
+      return;
+    }
+
+    const messageText = chatInput.trim();
+    
+    // Optimistic UI update - add message immediately
+    const tempMessage = {
+      _id: `temp-${Date.now()}`,
+      message: messageText,
+      sender: currentUser?._id || currentUser?.id,
+      createdAt: new Date().toISOString(),
+      product: product._id
+    };
+    
+    setChatMessages(prev => [...prev, tempMessage]);
+    setChatInput('');
+    setChatError('');
+
+    // Send via socket
+    socketRef.current?.emit('sendProductMessage', {
+      productId: product._id,
+      text: messageText
+    });
   };
 
   if (loading) {
@@ -500,10 +614,7 @@ function ProductDetails() {
                     {product.seller && (
                       <button
                         className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-gray-700 font-semibold rounded-lg border-2 border-gray-300 hover:border-gray-400 transition-all"
-                        onClick={() => {
-                          // Navigate to chat or show message
-                          alert('Chat with seller feature - Contact: ' + (product.seller.email || 'N/A'));
-                        }}
+                        onClick={handleOpenChat}
                       >
                         <MessageCircle className="w-5 h-5" />
                         Chat with seller
@@ -556,6 +667,173 @@ function ProductDetails() {
             quantity={quantity}
             onSuccess={handlePaymentSuccess}
           />
+        )}
+
+        {isChatOpen && product?.seller && (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
+            <div className="fixed right-0 top-0 w-full md:w-[450px] h-full bg-[#111b21] shadow-2xl flex flex-col">
+              {/* Chat Header - WhatsApp Style */}
+              <div className="bg-[#202c33] px-4 py-3 flex items-center justify-between border-b border-[#2a3942]">
+                <div className="flex items-center space-x-3 flex-1">
+                  {/* Seller Avatar */}
+                  {product.seller.image ? (
+                    <img
+                      src={product.seller.image}
+                      alt={product.seller.name}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#00a884] flex items-center justify-center">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                  )}
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-medium truncate">{product.seller.name}</h3>
+                    <p className="text-[#aebac1] text-xs truncate">
+                      {product.name}
+                    </p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setIsChatOpen(false)}
+                  className="text-[#aebac1] hover:text-white transition p-2"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Chat Background Pattern */}
+              <div 
+                className="flex-1 overflow-y-auto px-4 py-4 space-y-2 scrollbar-thin scrollbar-thumb-[#374450] scrollbar-track-transparent relative"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                  backgroundColor: '#0b141a'
+                }}
+              >
+                {chatMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <MessageCircle className="w-16 h-16 text-[#374450] mx-auto mb-4" />
+                      <p className="text-[#aebac1] font-medium">No messages yet</p>
+                      <p className="text-[#667781] text-sm mt-2">Start chatting with the seller</p>
+                    </div>
+                  </div>
+                ) : (
+                  chatMessages.map((message, index) => {
+                    // Robust message sender comparison
+                    const messageSenderId = typeof message.sender === 'object' 
+                      ? (message.sender._id || message.sender.id)
+                      : message.sender;
+                    const currentUserId = currentUser?._id || currentUser?.id;
+                    const isOwnMessage = String(messageSenderId) === String(currentUserId);
+                    
+                    const showDateDivider = index === 0 || 
+                      new Date(chatMessages[index - 1].createdAt).toDateString() !== 
+                      new Date(message.createdAt).toDateString();
+
+                    return (
+                      <div key={message._id || message.id || index}>
+                        {/* Date Divider */}
+                        {showDateDivider && (
+                          <div className="flex justify-center my-4">
+                            <div className="bg-[#202c33] text-[#aebac1] text-xs px-3 py-1 rounded-md shadow-sm">
+                              {new Date(message.createdAt).toLocaleDateString('en-US', { 
+                                month: 'long', 
+                                day: 'numeric',
+                                year: 'numeric' 
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Message Bubble */}
+                        <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-1`}>
+                          <div
+                            className={`relative max-w-[75%] px-3 py-2 rounded-lg shadow-md ${
+                              isOwnMessage
+                                ? 'bg-[#005c4b] text-white'
+                                : 'bg-[#202c33] text-white'
+                            }`}
+                            style={{
+                              borderRadius: isOwnMessage 
+                                ? '8px 8px 0px 8px' 
+                                : '8px 8px 8px 0px'
+                            }}
+                          >
+                            {/* Sender Name (only for received messages) */}
+                            {!isOwnMessage && (
+                              <p className="text-[#00a884] text-xs font-semibold mb-1">
+                                {product.seller.name}
+                              </p>
+                            )}
+                            
+                            {/* Message Text */}
+                            <p className="text-sm leading-relaxed break-words pr-12">
+                              {message.message || message.text}
+                            </p>
+
+                            {/* Time */}
+                            <div className="absolute bottom-1 right-2">
+                              <span className={`text-[10px] ${
+                                isOwnMessage ? 'text-[#8696a0]' : 'text-[#667781]'
+                              }`}>
+                                {new Date(message.createdAt).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                {/* Auto-scroll anchor */}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Message Input - WhatsApp Style */}
+              <div className="bg-[#202c33] px-4 py-3 flex items-center space-x-3">
+                <div className="flex-1 bg-[#2a3942] rounded-lg flex items-center px-4 py-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(event) => setChatInput(event.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendChat();
+                      }
+                    }}
+                    placeholder="Type a message"
+                    className="flex-1 bg-transparent text-white text-sm placeholder-[#aebac1] focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  onClick={handleSendChat}
+                  disabled={!chatInput.trim()}
+                  className={`p-2 rounded-full transition-all ${
+                    chatInput.trim()
+                      ? 'bg-[#00a884] hover:bg-[#06cf9c] text-white'
+                      : 'bg-[#374450] text-[#aebac1] cursor-not-allowed'
+                  }`}
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Error Message */}
+              {chatError && (
+                <div className="bg-[#202c33] px-4 py-2 border-t border-[#2a3942]">
+                  <p className="text-red-400 text-sm">{chatError}</p>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

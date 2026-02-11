@@ -1,11 +1,24 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getProducts, getCurrentUser } from '../api';
 import { formatINR } from '../utils/currency';
 import { Search, ShoppingBag, Book, Laptop, Sofa, Shirt, Package, ChevronLeft, ChevronRight, Info, User, Loader2, Dumbbell } from 'lucide-react';
 
+const categories = [
+  { value: 'all', label: 'All Products', icon: ShoppingBag },
+  { value: 'Books', label: 'Books', icon: Book },
+  { value: 'Electronics', label: 'Electronics', icon: Laptop },
+  { value: 'Furniture', label: 'Furniture', icon: Sofa },
+  { value: 'Clothing', label: 'Clothing', icon: Shirt },
+  { value: 'Sports', label: 'Sports & Fitness', icon: Dumbbell },
+  { value: 'Other', label: 'Other', icon: Package }
+];
+
+const validCategories = new Set(categories.map((category) => category.value));
+
 function Shop() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,6 +43,18 @@ function Shop() {
   useEffect(() => {
     fetchProducts();
   }, [page, search, selectedCategory]);
+
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    const nextCategory = categoryParam && validCategories.has(categoryParam)
+      ? categoryParam
+      : 'all';
+
+    if (nextCategory !== selectedCategory) {
+      setSelectedCategory(nextCategory);
+      setPage(1);
+    }
+  }, [searchParams, selectedCategory]);
 
   const fetchProducts = async () => {
     try {
@@ -56,17 +81,12 @@ function Shop() {
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
     setPage(1);
+    if (category === 'all') {
+      setSearchParams({});
+      return;
+    }
+    setSearchParams({ category });
   };
-
-  const categories = [
-    { value: 'all', label: 'All Products', icon: ShoppingBag },
-    { value: 'Books', label: 'Books', icon: Book },
-    { value: 'Electronics', label: 'Electronics', icon: Laptop },
-    { value: 'Furniture', label: 'Furniture', icon: Sofa },
-    { value: 'Clothing', label: 'Clothing', icon: Shirt },
-    { value: 'Sports', label: 'Sports & Fitness', icon: Dumbbell },
-    { value: 'Other', label: 'Other', icon: Package }
-  ];
 
   const getCategoryIcon = (category) => {
     const cat = categories.find(c => c.value === category);
